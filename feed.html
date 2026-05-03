@@ -338,7 +338,7 @@
 
     let media = '';
     if (q.image_urls && q.image_urls.length) {
-      media = `<div class="media"><img data-src="${escAttr(q.image_urls[0])}" loading="lazy" alt=""/></div>`;
+      media = `<div class="media"><img src="${escAttr(q.image_urls[0])}" loading="lazy" decoding="async" alt=""/></div>`;
     } else if (q.video_urls && q.video_urls.length) {
       media = `<div class="media"><video data-src="${escAttr(q.video_urls[0])}" controls playsinline preload="none"></video></div>`;
     }

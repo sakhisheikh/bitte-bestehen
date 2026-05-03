@@ -431,9 +431,9 @@
 
     let mediaHtml = '';
     if (q.image_urls && q.image_urls.length) {
-      mediaHtml = `<div class="media-wrap"><div class="media"><img data-src="${escAttr(q.image_urls[0])}" loading="lazy" alt=""/></div></div>`;
+      mediaHtml = `<div class="media-wrap"><div class="media"><img src="${escAttr(q.image_urls[0])}" loading="lazy" decoding="async" width="64" height="64" alt=""/></div></div>`;
     } else if (q.video_urls && q.video_urls.length) {
-      mediaHtml = `<div class="media-wrap"><div class="media"><video data-src="${escAttr(q.video_urls[0])}" muted playsinline preload="none"></video></div><span class="vbadge">▶</span></div>`;
+      mediaHtml = `<div class="media-wrap"><div class="media"><video data-src="${escAttr(q.video_urls[0])}" muted playsinline preload="none" width="64" height="64"></video></div><span class="vbadge">▶</span></div>`;
     }
 
     return `<div class="q">

@@ -1,4 +1,4 @@
-const CACHE = 'dt-v6';
+const CACHE = 'dt-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -47,7 +47,10 @@ self.addEventListener('fetch', e => {
     e.respondWith(
       caches.match(req).then(hit => {
         const fetchPromise = fetch(req).then(res => {
-          if (res.ok) {
+          // Cache both ok responses AND opaque ones (cross-origin <img>/<video>
+          // requests are no-cors and come back as type 'opaque' with status 0,
+          // so res.ok is false. We still want them cached.)
+          if (res && (res.ok || res.type === 'opaque')) {
             const copy = res.clone();
             caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
           }
