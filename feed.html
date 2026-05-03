@@ -8,7 +8,18 @@
 <meta name="theme-color" content="#0a0a0a" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="icon-180.png" />
-<title>Theory · Feed</title>
+
+<title>Continuous Feed — German Driving Theory Practice (Führerschein) | Bitte Bestehen</title>
+<meta name="description" content="Scroll through all 2,400+ German driving theory questions on one continuous page in English or German. Klasse B/C filters, 5-point isolation, pre-highlighted answers. Free PWA, works offline." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://sakhisheikh.github.io/bitte-bestehen/feed.html" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Continuous Feed — German Driving Theory" />
+<meta property="og:description" content="2,400+ Führerschein questions in one scrollable feed. EN/DE, Klasse filters." />
+<meta property="og:url" content="https://sakhisheikh.github.io/bitte-bestehen/feed.html" />
+<meta property="og:image" content="https://sakhisheikh.github.io/bitte-bestehen/icon-512.png" />
+
+<script src="app-shared.js"></script>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -187,6 +198,7 @@
 </style>
 </head>
 <body>
+  <h1 style="position:absolute;left:-9999px;top:-9999px;">Continuous Feed of German Driving Theory Questions (Führerschein) — Bitte Bestehen</h1>
   <header class="topbar">
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="row">
@@ -197,6 +209,7 @@
         <span id="filterLabel"></span>
       </div>
       <div class="right">
+        <button class="toolbtn" id="langBtn" title="Toggle language">EN</button>
         <button class="toolbtn" id="shuffleBtn">Shuffle</button>
         <button class="toolbtn" id="filterBtn">Filter</button>
       </div>
@@ -216,18 +229,20 @@
   const ORDER_KEY = 'dt_order_v1';
   const FEED_POS_KEY = 'dt_feed_pos_v1';
 
-  let questions = [];
   let order = [];
-  let filter = 'all';
+  let p5Only = false;
+  let klasseKey = 'all';
+  let lang = 'en';
   let mediaIO = null;
   let positionIO = null;
   let openComments = new Set();
   let firstVisibleIdx = 0;
   let scrollRestored = false;
+  const T = (en, de) => lang === 'de' ? de : en;
 
   function saveState() {
     const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
-    cur.filter = filter;
+    cur.p5Only = p5Only; cur.klasseKey = klasseKey; cur.lang = lang;
     localStorage.setItem(STATE_KEY, JSON.stringify(cur));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
@@ -235,21 +250,18 @@
     try {
       const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
       const o = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
-      if (typeof s.filter === 'string') filter = s.filter;
+      if (typeof s.p5Only === 'boolean') p5Only = s.p5Only;
+      if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
+      if (typeof s.lang === 'string') lang = s.lang;
       if (Array.isArray(o)) order = o;
     } catch (e) {}
+    const urlLang = new URLSearchParams(location.search).get('lang');
+    if (urlLang === 'de' || urlLang === 'en') lang = urlLang;
   }
 
-  function applyFilter() {
-    let pool;
-    if (filter === 'p5') {
-      pool = questions.map((q, i) => i).filter(i => questions[i].points === '5 Points');
-    } else if (filter.startsWith('theme:')) {
-      const t = filter.slice(6);
-      pool = questions.map((q, i) => i).filter(i => questions[i].theme_name === t);
-    } else {
-      pool = questions.map((_, i) => i);
-    }
+  function rebuildOrder() {
+    let pool = DT.poolIndices(klasseKey);
+    if (p5Only) pool = pool.filter(i => DT.pointsNum(DT.structural(i)) === 5);
     order = pool;
     saveState();
   }
@@ -264,22 +276,28 @@
   }
 
   function render() {
+    document.documentElement.lang = lang;
+    $('langBtn').textContent = lang.toUpperCase();
+    $('shuffleBtn').textContent = T('Shuffle', 'Mischen');
+    $('filterBtn').textContent = T('Filter', 'Filter');
+
     if (!order.length) {
-      $('main').innerHTML = '<div class="empty">No questions match this filter.</div>';
+      $('main').innerHTML = `<div class="empty">${T('No questions match this filter.', 'Keine Fragen für diesen Filter.')}</div>`;
       $('counter').textContent = '0 / 0';
       $('progressFill').style.width = '0%';
       return;
     }
-    $('filterLabel').textContent = filter === 'all' ? '' : (filter === 'p5' ? '· 5-pt' : '· ' + filter.slice(6));
+    const labels = [];
+    if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
+    if (p5Only) labels.push(T('5-pt', '5-Pkt'));
+    $('filterLabel').textContent = labels.length ? '· ' + labels.join(' · ') : '';
 
-    // Detect "natural order" — IDs sorted matches the original dataset order.
-    // We use this to decide whether to show theme/chapter section headers.
     const naturalOrder = isNaturalOrder();
 
     const html = [];
     let lastTheme = null, lastChapter = null;
     for (let i = 0; i < order.length; i++) {
-      const q = questions[order[i]];
+      const q = DT.getQ(order[i], lang);
       if (naturalOrder) {
         if (q.theme_name !== lastTheme) {
           html.push(`<div class="theme-h">${esc(q.theme_name)}</div>`);
@@ -303,11 +321,10 @@
   }
 
   function isNaturalOrder() {
-    if (filter.startsWith('theme:')) return true;
-    // check first 30 entries are monotonically increasing question_id strings
+    // Natural means first 30 IDs are monotonically increasing
     for (let i = 1; i < Math.min(order.length, 30); i++) {
-      const a = questions[order[i-1]].question_id;
-      const b = questions[order[i]].question_id;
+      const a = DT.structural(order[i-1]).question_id;
+      const b = DT.structural(order[i]).question_id;
       if (a > b) return false;
     }
     return true;
@@ -335,7 +352,7 @@
     }).join('');
 
     const commentBlock = q.comment ? `
-      <div class="comment-toggle" data-id="${escAttr(q.question_id)}">Show explanation</div>
+      <div class="comment-toggle" data-id="${escAttr(q.question_id)}">${T('Show explanation', 'Erklärung anzeigen')}</div>
       <div class="comment" data-id="${escAttr(q.question_id)}">${esc(q.comment)}</div>
     ` : '';
 
@@ -380,11 +397,11 @@
       const body = document.querySelector(`.comment[data-id="${cssEsc(qid)}"]`);
       if (openComments.has(qid)) {
         body.classList.add('open');
-        btn.textContent = 'Hide explanation';
+        btn.textContent = T('Hide explanation', 'Erklärung ausblenden');
       }
       btn.onclick = () => {
         const isOpen = body.classList.toggle('open');
-        btn.textContent = isOpen ? 'Hide explanation' : 'Show explanation';
+        btn.textContent = isOpen ? T('Hide explanation', 'Erklärung ausblenden') : T('Show explanation', 'Erklärung anzeigen');
         if (isOpen) openComments.add(qid); else openComments.delete(qid);
       };
     });
@@ -403,8 +420,7 @@
         firstVisibleIdx = Math.min(...visible);
         updateCounter();
         if (scrollRestored) {
-          // persist position so we can resume later
-          const qid = questions[order[firstVisibleIdx]]?.question_id;
+          const qid = DT.structural(order[firstVisibleIdx])?.question_id;
           if (qid) localStorage.setItem(FEED_POS_KEY, qid);
         }
       }
@@ -435,31 +451,36 @@
   }
 
   function openFilterSheet() {
-    const themes = Array.from(new Set(questions.map(q => q.theme_name))).sort();
+    const klasseKeys = ['all','grundstoff','b','lkw'];
     const html = `
-      <h3>Filter</h3>
-      <button class="${filter === 'all' ? 'active' : ''}" data-f="all">All questions (${questions.length})</button>
-      <button class="${filter === 'p5' ? 'active' : ''}" data-f="p5">5-point only (${questions.filter(q => q.points === '5 Points').length})</button>
-      ${themes.map(t => `<button class="${filter === 'theme:' + t ? 'active' : ''}" data-f="theme:${escAttr(t)}">${esc(t)}</button>`).join('')}
-      <h3 style="margin-top:18px;">Position</h3>
-      <button data-f="reset-pos">Jump to top</button>
-      <button data-f="close" style="margin-top:6px; text-align:center;">Cancel</button>
+      <h3>${T('Klasse', 'Klasse')}</h3>
+      ${klasseKeys.map(k => `<button class="${klasseKey === k ? 'active' : ''}" data-action="klasse" data-v="${k}">${esc(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`).join('')}
+      <h3 style="margin-top:14px;">${T('Difficulty', 'Schwierigkeit')}</h3>
+      <button class="${!p5Only ? 'active' : ''}" data-action="p5" data-v="0">${T('All point values', 'Alle Punktwerte')}</button>
+      <button class="${p5Only ? 'active' : ''}" data-action="p5" data-v="1">${T('5-point only', 'Nur 5-Punkte')}</button>
+      <h3 style="margin-top:14px;">${T('Language', 'Sprache')}</h3>
+      <button class="${lang === 'en' ? 'active' : ''}" data-action="lang" data-v="en">English</button>
+      <button class="${lang === 'de' ? 'active' : ''}" data-action="lang" data-v="de">Deutsch</button>
+      <h3 style="margin-top:14px;">${T('Position', 'Position')}</h3>
+      <button data-action="reset-pos">${T('Jump to top', 'Zum Anfang springen')}</button>
+      <button data-action="close" style="margin-top:6px; text-align:center;">${T('Close', 'Schließen')}</button>
     `;
     $('sheet').innerHTML = html;
     $('modal').classList.add('open');
     $('sheet').querySelectorAll('button').forEach(b => {
       b.onclick = () => {
-        const f = b.dataset.f;
-        if (f === 'close') { $('modal').classList.remove('open'); return; }
-        if (f === 'reset-pos') {
+        const a = b.dataset.action, v = b.dataset.v;
+        if (a === 'close') { $('modal').classList.remove('open'); return; }
+        if (a === 'reset-pos') {
           localStorage.removeItem(FEED_POS_KEY);
           window.scrollTo({ top: 0 });
           $('modal').classList.remove('open');
           return;
         }
-        filter = f;
-        applyFilter();
-        localStorage.removeItem(FEED_POS_KEY);
+        if (a === 'klasse') { klasseKey = v; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
+        else if (a === 'p5') { p5Only = v === '1'; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
+        else if (a === 'lang') { lang = v; }
+        saveState();
         render();
         $('modal').classList.remove('open');
       };
@@ -475,17 +496,18 @@
 
   async function init() {
     try {
-      questions = await (await fetch('questions.json')).json();
+      await DT.load();
     } catch (e) {
-      $('main').innerHTML = '<div class="empty">Failed to load questions.json</div>';
+      $('main').innerHTML = '<div class="empty">Failed to load questions.</div>';
       return;
     }
     loadState();
-    if (!order.length || order.length > questions.length) {
-      applyFilter();
+    if (!order.length || order.length > DT.totalCount()) {
+      rebuildOrder();
     }
     $('shuffleBtn').onclick = shuffleOrder;
     $('filterBtn').onclick = openFilterSheet;
+    $('langBtn').onclick = () => { lang = lang === 'en' ? 'de' : 'en'; saveState(); render(); };
     $('topFab').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
 

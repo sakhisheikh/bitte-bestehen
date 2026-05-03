@@ -8,7 +8,18 @@
 <meta name="theme-color" content="#0a0a0a" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="icon-180.png" />
-<title>Theory · Cheatsheet</title>
+
+<title>Cheatsheet — German Driving Theory Quick Reference (Führerschein PDF) | Bitte Bestehen</title>
+<meta name="description" content="One-line-per-question reference for the German driving theory exam. 2,400+ TÜV/DEKRA questions with correct answers only. English &amp; Deutsch, Klasse B/C filters. Print-friendly: save as PDF for offline study." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://sakhisheikh.github.io/bitte-bestehen/cheatsheet.html" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Driving Theory Cheatsheet (Führerschein PDF, EN/DE)" />
+<meta property="og:description" content="2,400+ Führerschein questions on one page. Print or save as PDF." />
+<meta property="og:url" content="https://sakhisheikh.github.io/bitte-bestehen/cheatsheet.html" />
+<meta property="og:image" content="https://sakhisheikh.github.io/bitte-bestehen/icon-512.png" />
+
+<script src="app-shared.js"></script>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -172,11 +183,13 @@
 </style>
 </head>
 <body>
+  <h1 style="position:absolute;left:-9999px;top:-9999px;">German Driving Theory Cheatsheet — Führerschein Question Bank Reference (English &amp; Deutsch)</h1>
   <header class="topbar">
     <div class="row1">
       <a href="./">← Quiz</a>
       <a href="feed.html">Feed</a>
       <span class="title">Cheatsheet</span>
+      <button class="chip" id="langBtn" style="margin-left:auto;" title="Toggle language">EN</button>
       <span class="count" id="count">…</span>
     </div>
     <div class="row2" id="chips"></div>
@@ -190,22 +203,47 @@
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  let questions = [];
-  let activeTheme = 'all';
+  // filter state: 'all' | 'p5' | 'klasse:b|grundstoff|lkw' | 'theme:<en theme_name>'
+  let active = 'all';
+  let lang = 'en';
   let query = '';
-  let io = null; // IntersectionObserver for lazy media
+  let io = null;
+  const T = (en, de) => lang === 'de' ? de : en;
 
   async function init() {
     try {
-      questions = await (await fetch('questions.json')).json();
+      await DT.load();
     } catch (e) {
-      $('main').innerHTML = '<div class="empty">Failed to load questions.json</div>';
+      $('main').innerHTML = '<div class="empty">Failed to load questions.</div>';
       return;
     }
+    // restore settings
+    try {
+      const s = JSON.parse(localStorage.getItem('dt_state_v1') || '{}');
+      if (s.lang === 'en' || s.lang === 'de') lang = s.lang;
+    } catch {}
+    const urlLang = new URLSearchParams(location.search).get('lang');
+    if (urlLang === 'de' || urlLang === 'en') lang = urlLang;
+
     buildChips();
     $('search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); renderDebounced(); });
     $('printFab').onclick = onPrintClick;
+    $('langBtn').onclick = toggleLang;
     window.addEventListener('beforeprint', () => { eagerLoadAllImages(); });
+    render();
+  }
+
+  function toggleLang() {
+    lang = lang === 'en' ? 'de' : 'en';
+    try {
+      const cur = JSON.parse(localStorage.getItem('dt_state_v1') || '{}');
+      cur.lang = lang;
+      localStorage.setItem('dt_state_v1', JSON.stringify(cur));
+    } catch {}
+    document.documentElement.lang = lang;
+    $('langBtn').textContent = lang.toUpperCase();
+    $('search').placeholder = T('Search question or answer…', 'Frage oder Antwort suchen…');
+    buildChips();
     render();
   }
 
@@ -267,56 +305,92 @@
   }
 
   function buildChips() {
-    const themes = Array.from(new Set(questions.map(q => q.theme_name)));
+    const total = DT.totalCount();
+    const klasses = ['grundstoff','b','lkw'];
+    // English theme names from structural data — stable for filter key, but display localized
+    const themesEN = Array.from(new Set(DT.all().map(q => q.theme_name)));
+    const themeLabel = (enName) => {
+      // find DE label by sampling first matching question
+      if (lang === 'de') {
+        for (let i = 0; i < DT.totalCount(); i++) {
+          const s = DT.structural(i);
+          if (s.theme_name === enName) {
+            const de = DT.getQ(i, 'de');
+            return de.theme_name;
+          }
+        }
+      }
+      return enName;
+    };
+    const p5Count = (() => { let n = 0; for (let i = 0; i < total; i++) if (DT.pointsNum(DT.structural(i)) === 5) n++; return n; })();
+
     const chips = [
-      `<button class="chip active" data-t="all">All (${questions.length})</button>`,
-      `<button class="chip" data-t="p5">5-pt only (${questions.filter(q => q.points==='5 Points').length})</button>`,
-      ...themes.map(t => `<button class="chip" data-t="theme:${escAttr(t)}">${esc(t)}</button>`)
+      `<button class="chip ${active==='all'?'active':''}" data-t="all">${T('All','Alle')} (${total})</button>`,
+      `<button class="chip ${active==='p5'?'active':''}" data-t="p5">${T('5-pt only','Nur 5-Pkt')} (${p5Count})</button>`,
+      ...klasses.map(k => `<button class="chip ${active==='klasse:'+k?'active':''}" data-t="klasse:${k}">${esc(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`),
+      ...themesEN.map(t => `<button class="chip ${active==='theme:'+t?'active':''}" data-t="theme:${escAttr(t)}">${esc(themeLabel(t))}</button>`)
     ].join('');
     $('chips').innerHTML = chips;
     $('chips').querySelectorAll('.chip').forEach(b => {
       b.onclick = () => {
-        $('chips').querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-        activeTheme = b.dataset.t;
+        active = b.dataset.t;
+        buildChips();
         window.scrollTo(0, 0);
         render();
       };
     });
   }
 
-  function filtered() {
-    let list = questions;
-    if (activeTheme === 'p5') list = list.filter(q => q.points === '5 Points');
-    else if (activeTheme.startsWith('theme:')) {
-      const t = activeTheme.slice(6);
-      list = list.filter(q => q.theme_name === t);
+  function indices() {
+    let pool;
+    if (active === 'all') pool = Array.from({length: DT.totalCount()}, (_, i) => i);
+    else if (active === 'p5') {
+      pool = [];
+      for (let i = 0; i < DT.totalCount(); i++) {
+        if (DT.pointsNum(DT.structural(i)) === 5) pool.push(i);
+      }
+    } else if (active.startsWith('klasse:')) {
+      pool = DT.poolIndices(active.slice(7));
+    } else if (active.startsWith('theme:')) {
+      const t = active.slice(6);
+      pool = [];
+      for (let i = 0; i < DT.totalCount(); i++) {
+        if (DT.structural(i).theme_name === t) pool.push(i);
+      }
+    } else {
+      pool = Array.from({length: DT.totalCount()}, (_, i) => i);
     }
     if (query) {
-      list = list.filter(q => {
+      pool = pool.filter(i => {
+        const q = DT.getQ(i, lang);
         if ((q.question_text || '').toLowerCase().includes(query)) return true;
         if ((q.correct_answers || []).some(a => (a.text || '').toLowerCase().includes(query))) return true;
         if ((q.question_id || '').toLowerCase().includes(query)) return true;
         return false;
       });
     }
-    return list;
+    return pool;
   }
 
   let renderTimer;
   function renderDebounced() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 120); }
 
   function render() {
-    const list = filtered();
-    $('count').textContent = list.length + ' Q';
-    if (!list.length) {
-      $('main').innerHTML = '<div class="empty">No matches.</div>';
+    document.documentElement.lang = lang;
+    $('langBtn').textContent = lang.toUpperCase();
+    $('search').placeholder = T('Search question or answer…', 'Frage oder Antwort suchen…');
+
+    const idxs = indices();
+    $('count').textContent = idxs.length + ' Q';
+    if (!idxs.length) {
+      $('main').innerHTML = `<div class="empty">${T('No matches.', 'Keine Treffer.')}</div>`;
       return;
     }
 
-    // group by theme then chapter
+    // group by (localized) theme then chapter
     const groups = new Map();
-    for (const q of list) {
+    for (const i of idxs) {
+      const q = DT.getQ(i, lang);
       const tk = q.theme_name;
       if (!groups.has(tk)) groups.set(tk, new Map());
       const chMap = groups.get(tk);

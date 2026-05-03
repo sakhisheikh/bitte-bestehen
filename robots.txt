@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /sw.js
+
+Sitemap: https://sakhisheikh.github.io/bitte-bestehen/sitemap.xml

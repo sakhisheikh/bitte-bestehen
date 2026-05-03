@@ -1,16 +1,23 @@
 {
-  "name": "Driving Theory",
-  "short_name": "Theory",
-  "description": "German driving theory speed-memorizer",
+  "name": "Bitte Bestehen — Driving Theory",
+  "short_name": "Bitte Bestehen",
+  "description": "German driving theory speed-memorizer (Führerschein) — 2,400+ questions in English & Deutsch with Klasse B/A/C/CE filters. Pre-highlighted answers, three views, fully offline-capable.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
+  "lang": "en",
+  "categories": ["education", "productivity"],
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Quiz", "short_name": "Quiz", "url": "./", "description": "Speed-memorize one card at a time" },
+    { "name": "Feed",  "short_name": "Feed",  "url": "./feed.html", "description": "Continuous scroll through all questions" },
+    { "name": "Cheatsheet", "short_name": "Sheet", "url": "./cheatsheet.html", "description": "Compact one-row-per-question reference (PDF)" }
   ]
 }

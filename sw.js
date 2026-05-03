@@ -1,10 +1,12 @@
-const CACHE = 'dt-v5';
+const CACHE = 'dt-v6';
 const ASSETS = [
   './',
   './index.html',
   './cheatsheet.html',
   './feed.html',
+  './app-shared.js',
   './questions.json',
+  './questions_de.json',
   './manifest.webmanifest',
   './icon.svg',
   './icon-180.png',
@@ -30,7 +32,6 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Cache-first for same-origin assets
   if (url.origin === self.location.origin) {
     e.respondWith(
       caches.match(req).then(hit => hit || fetch(req).then(res => {
@@ -42,7 +43,6 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Stale-while-revalidate for media (images/videos from googleapis)
   if (url.hostname.endsWith('googleapis.com') || url.hostname.endsWith('googleusercontent.com')) {
     e.respondWith(
       caches.match(req).then(hit => {

@@ -6,12 +6,58 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Theory" />
+<meta name="apple-mobile-web-app-title" content="Bitte Bestehen" />
 <meta name="theme-color" content="#0a0a0a" />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="apple-touch-icon" href="icon-180.png" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
-<title>Driving Theory</title>
+
+<title>Bitte Bestehen — German Driving Theory Practice (Führerschein) in English & Deutsch | Klasse B, A, C</title>
+<meta name="description" content="Free PWA to memorize the German driving theory exam (Führerschein / Theorieprüfung) in English or German. 2,400+ official TÜV/DEKRA questions with pre-highlighted answers. Klasse B, Klasse A, Klasse C/CE filters. Speed-memorization mode, scroll feed, and printable cheatsheet PDF. Works offline on iPhone." />
+<meta name="keywords" content="Führerschein, driving theory, theorieprüfung, German driving license, Klasse B, Klasse A, Klasse C, TÜV, DEKRA, fragenkatalog, fahrschule, fahrprüfung, learner driver, German driving exam, Führerschein app, theory test app, driving practice, PKW, LKW, learn German driving rules, Fahrerlaubnis" />
+<meta name="author" content="sakhisheikh" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://sakhisheikh.github.io/bitte-bestehen/" />
+<link rel="alternate" hreflang="en" href="https://sakhisheikh.github.io/bitte-bestehen/?lang=en" />
+<link rel="alternate" hreflang="de" href="https://sakhisheikh.github.io/bitte-bestehen/?lang=de" />
+<link rel="alternate" hreflang="x-default" href="https://sakhisheikh.github.io/bitte-bestehen/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Bitte Bestehen — German Driving Theory Speed-Memorizer (EN/DE)" />
+<meta property="og:description" content="Free PWA: memorize 2,400+ official Führerschein questions with pre-highlighted answers. Klasse B/A/C filters, English & Deutsch, offline-capable on iPhone." />
+<meta property="og:url" content="https://sakhisheikh.github.io/bitte-bestehen/" />
+<meta property="og:site_name" content="Bitte Bestehen" />
+<meta property="og:image" content="https://sakhisheikh.github.io/bitte-bestehen/icon-512.png" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:locale:alternate" content="de_DE" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Bitte Bestehen — German Driving Theory Practice (EN/DE)" />
+<meta name="twitter:description" content="2,400+ Führerschein questions, pre-highlighted answers, Klasse B/A/C filters. Free PWA, works offline." />
+<meta name="twitter:image" content="https://sakhisheikh.github.io/bitte-bestehen/icon-512.png" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Bitte Bestehen",
+  "alternateName": ["German Driving Theory PWA", "Führerschein Practice"],
+  "url": "https://sakhisheikh.github.io/bitte-bestehen/",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any (PWA)",
+  "description": "Free progressive web app for memorizing the German driving theory exam (Führerschein / Theorieprüfung) with 2,400+ official TÜV/DEKRA questions in English and German. Filter by Klasse B (PKW), Klasse C/CE (LKW) or Grundstoff. Pre-highlighted correct answers for speed memorization.",
+  "inLanguage": ["en", "de"],
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "audience": { "@type": "EducationalAudience", "educationalRole": "Driver License Applicant" },
+  "about": [
+    { "@type": "Thing", "name": "German driving license" },
+    { "@type": "Thing", "name": "Führerschein" },
+    { "@type": "Thing", "name": "Theorieprüfung" }
+  ]
+}
+</script>
+
+<script src="app-shared.js"></script>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -274,6 +320,7 @@
 </style>
 </head>
 <body>
+  <h1 style="position:absolute;left:-9999px;top:-9999px;">Bitte Bestehen — German Driving Theory Practice (Führerschein) in English &amp; Deutsch</h1>
   <div class="topbar">
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="topmeta">
@@ -282,6 +329,7 @@
         <span id="filterLabel"></span>
       </div>
       <div style="display:flex; gap:6px;">
+        <button class="toolbtn" id="langBtn" title="Toggle language">EN</button>
         <a class="toolbtn" href="feed.html" style="text-decoration:none;">Feed</a>
         <a class="toolbtn" href="cheatsheet.html" style="text-decoration:none;">Sheet</a>
         <button class="toolbtn" id="shuffleBtn">Shuffle</button>
@@ -308,17 +356,19 @@
   const STATE_KEY = 'dt_state_v1';
   const ORDER_KEY = 'dt_order_v1';
 
-  let questions = [];
   let order = [];           // array of indices into questions
   let pos = 0;              // current position in order
-  let filter = 'all';       // all | p5 | theme:<name>
+  let p5Only = false;       // 5-points-only toggle
+  let klasseKey = 'all';    // all | grundstoff | b | lkw
+  let lang = 'en';          // en | de
   let commentExpanded = {}; // qid -> bool
 
   const $ = id => document.getElementById(id);
+  const T = (en, de) => lang === 'de' ? de : en;
 
   /* ---------- persistence ---------- */
   function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, filter, commentExpanded }));
+    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, klasseKey, lang, commentExpanded }));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
   function loadState() {
@@ -326,23 +376,22 @@
       const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
       const o = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
       if (typeof s.pos === 'number') pos = s.pos;
-      if (typeof s.filter === 'string') filter = s.filter;
+      if (typeof s.p5Only === 'boolean') p5Only = s.p5Only;
+      if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
+      if (typeof s.lang === 'string') lang = s.lang;
       if (s.commentExpanded) commentExpanded = s.commentExpanded;
       if (Array.isArray(o)) order = o;
     } catch (e) {}
+
+    // URL ?lang=de override (handy for hreflang links)
+    const urlLang = new URLSearchParams(location.search).get('lang');
+    if (urlLang === 'de' || urlLang === 'en') lang = urlLang;
   }
 
   /* ---------- order / filter ---------- */
-  function applyFilter() {
-    let pool;
-    if (filter === 'p5') {
-      pool = questions.map((q, i) => i).filter(i => questions[i].points === '5 Points');
-    } else if (filter.startsWith('theme:')) {
-      const t = filter.slice(6);
-      pool = questions.map((q, i) => i).filter(i => questions[i].theme_name === t);
-    } else {
-      pool = questions.map((_, i) => i);
-    }
+  function rebuildOrder() {
+    let pool = DT.poolIndices(klasseKey);
+    if (p5Only) pool = pool.filter(i => DT.pointsNum(DT.structural(i)) === 5);
     order = pool;
     pos = 0;
     saveState();
@@ -360,21 +409,27 @@
 
   /* ---------- render ---------- */
   function render() {
+    document.documentElement.lang = lang;
+    $('langBtn').textContent = lang.toUpperCase();
+
     if (!order.length) {
-      $('stage').innerHTML = '<div class="empty">No questions match this filter.</div>';
+      $('stage').innerHTML = `<div class="empty">${T('No questions match this filter.', 'Keine Fragen für diesen Filter.')}</div>`;
       $('bottombar').style.display = 'none';
       $('counter').textContent = '0 / 0';
       $('progressFill').style.width = '0%';
       return;
     }
     pos = Math.max(0, Math.min(pos, order.length - 1));
-    const q = questions[order[pos]];
+    const q = DT.getQ(order[pos], lang);
     const correctSet = new Set((q.correct_answers || []).map(c => c.letter));
-    const isP5 = q.points === '5 Points';
+    const isP5 = DT.pointsNum(q) === 5;
 
     $('counter').textContent = `${pos + 1} / ${order.length}`;
     $('progressFill').style.width = `${((pos + 1) / order.length) * 100}%`;
-    $('filterLabel').textContent = filter === 'all' ? '' : (filter === 'p5' ? '· 5-pt only' : '· ' + filter.slice(6));
+    const labels = [];
+    if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
+    if (p5Only) labels.push(T('5-pt only', 'nur 5-Punkte'));
+    $('filterLabel').textContent = labels.length ? '· ' + labels.join(' · ') : '';
 
     let media = '';
     if (q.image_urls && q.image_urls.length) {
@@ -394,7 +449,7 @@
     const expanded = commentExpanded[q.question_id];
     const commentHtml = q.comment ? `
       <div class="comment ${expanded ? '' : 'collapsed'}" id="comment">${escapeHtml(q.comment)}</div>
-      <div class="comment-toggle" id="commentToggle">${expanded ? 'Show less' : 'Show explanation'}</div>
+      <div class="comment-toggle" id="commentToggle">${expanded ? T('Show less', 'Weniger anzeigen') : T('Show explanation', 'Erklärung anzeigen')}</div>
     ` : '';
 
     $('stage').innerHTML = `
@@ -409,6 +464,12 @@
     `;
     $('bottombar').style.display = 'flex';
     $('stage').scrollTop = 0;
+
+    // Localized button labels
+    $('prevBtn').textContent = T('← Prev', '← Zurück');
+    $('nextBtn').textContent = T('Next →', 'Weiter →');
+    $('shuffleBtn').textContent = T('Shuffle', 'Mischen');
+    $('filterBtn').textContent = T('Filter', 'Filter');
 
     if (q.comment) {
       $('commentToggle').onclick = () => {
@@ -430,35 +491,41 @@
 
   /* ---------- modal / filter sheet ---------- */
   function openFilterSheet() {
-    const themes = Array.from(new Set(questions.map(q => q.theme_name))).sort();
+    const klasseKeys = ['all','grundstoff','b','lkw'];
     const html = `
-      <h3>Filter</h3>
-      <button class="${filter === 'all' ? 'active' : ''}" data-f="all">All questions (${questions.length})</button>
-      <button class="${filter === 'p5' ? 'active' : ''}" data-f="p5">5-point questions only (${questions.filter(q=>q.points==='5 Points').length})</button>
-      ${themes.map(t => `<button class="${filter === 'theme:' + t ? 'active' : ''}" data-f="theme:${escapeAttr(t)}">${escapeHtml(t)} (${questions.filter(q=>q.theme_name===t).length})</button>`).join('')}
-      <h3 style="margin-top:18px;">Progress</h3>
-      <button class="danger" data-f="reset">Reset progress</button>
-      <button data-f="close" style="margin-top:6px; text-align:center;">Cancel</button>
+      <h3>${T('Klasse', 'Klasse')}</h3>
+      ${klasseKeys.map(k => `<button class="${klasseKey === k ? 'active' : ''}" data-action="klasse" data-v="${k}">${escapeHtml(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`).join('')}
+      <h3 style="margin-top:14px;">${T('Difficulty', 'Schwierigkeit')}</h3>
+      <button class="${!p5Only ? 'active' : ''}" data-action="p5" data-v="0">${T('All point values', 'Alle Punktwerte')}</button>
+      <button class="${p5Only ? 'active' : ''}" data-action="p5" data-v="1">${T('5-point only (high-stakes)', 'Nur 5-Punkte (Wichtig)')}</button>
+      <h3 style="margin-top:14px;">${T('Language', 'Sprache')}</h3>
+      <button class="${lang === 'en' ? 'active' : ''}" data-action="lang" data-v="en">English</button>
+      <button class="${lang === 'de' ? 'active' : ''}" data-action="lang" data-v="de">Deutsch</button>
+      <h3 style="margin-top:14px;">${T('Progress', 'Fortschritt')}</h3>
+      <button class="danger" data-action="reset">${T('Reset progress', 'Fortschritt zurücksetzen')}</button>
+      <button data-action="close" style="margin-top:6px; text-align:center;">${T('Close', 'Schließen')}</button>
     `;
     $('sheet').innerHTML = html;
     $('modal').classList.add('open');
     $('sheet').querySelectorAll('button').forEach(b => {
       b.onclick = () => {
-        const f = b.dataset.f;
-        if (f === 'close') { $('modal').classList.remove('open'); return; }
-        if (f === 'reset') {
-          if (confirm('Reset progress and restore default order?')) {
+        const a = b.dataset.action, v = b.dataset.v;
+        if (a === 'close') { $('modal').classList.remove('open'); return; }
+        if (a === 'reset') {
+          if (confirm(T('Reset progress?', 'Fortschritt zurücksetzen?'))) {
             localStorage.removeItem(STATE_KEY);
             localStorage.removeItem(ORDER_KEY);
-            filter = 'all';
-            applyFilter();
+            klasseKey = 'all'; p5Only = false;
+            rebuildOrder();
             render();
           }
           $('modal').classList.remove('open');
           return;
         }
-        filter = f;
-        applyFilter();
+        if (a === 'klasse') { klasseKey = v; rebuildOrder(); }
+        else if (a === 'p5')  { p5Only = v === '1'; rebuildOrder(); }
+        else if (a === 'lang') { lang = v; }
+        saveState();
         render();
         $('modal').classList.remove('open');
       };
@@ -493,22 +560,22 @@
   /* ---------- init ---------- */
   async function init() {
     try {
-      const res = await fetch('questions.json');
-      questions = await res.json();
+      await DT.load();
     } catch (e) {
-      $('loading').textContent = 'Failed to load questions.json';
+      $('loading').textContent = 'Failed to load questions.';
       return;
     }
 
     loadState();
-    if (!order.length || order.length > questions.length) {
-      applyFilter();
+    if (!order.length || order.length > DT.totalCount()) {
+      rebuildOrder();
     }
 
     $('nextBtn').onclick = next;
     $('prevBtn').onclick = prev;
     $('shuffleBtn').onclick = shuffle;
     $('filterBtn').onclick = openFilterSheet;
+    $('langBtn').onclick = () => { lang = lang === 'en' ? 'de' : 'en'; saveState(); render(); };
     $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
 
     initGestures();
