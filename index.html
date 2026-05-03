@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Theory" />
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<title>Driving Theory</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #161616;
+    --card2: #1f1f1f;
+    --text: #f5f5f5;
+    --muted: #888;
+    --green: #22c55e;
+    --green-bg: rgba(34, 197, 94, 0.15);
+    --green-border: rgba(34, 197, 94, 0.55);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.15);
+    --accent: #60a5fa;
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.4;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+  }
+
+  /* Top bar */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 8px 14px 6px;
+  }
+  .progress-track {
+    height: 4px;
+    width: 100%;
+    background: #222;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 120ms ease;
+  }
+  .topmeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .topmeta .left { display: flex; gap: 10px; align-items: center; }
+  .toolbtn {
+    background: var(--card);
+    color: var(--text);
+    border: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toolbtn.active { background: var(--accent); color: #0a0a0a; }
+
+  /* Card */
+  .stage {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 14px 100px;
+  }
+  .qmeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .points {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #2a2a2a;
+    color: #ddd;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+  }
+  .points.p5 { background: var(--red-bg); color: var(--red); }
+  .qtext {
+    font-size: 21px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 4px 0 14px;
+  }
+  .media {
+    margin-bottom: 14px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+  }
+  .media img, .media video {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 50vh;
+    object-fit: contain;
+    background: #000;
+  }
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .option {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    font-size: 16px;
+    line-height: 1.35;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .option .letter {
+    font-weight: 700;
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 22px;
+  }
+  .option.correct {
+    background: var(--green-bg);
+    border-color: var(--green-border);
+  }
+  .option.correct .letter {
+    color: var(--green);
+  }
+  .option.correct::after {
+    content: "✓";
+    margin-left: auto;
+    color: var(--green);
+    font-weight: 800;
+    font-size: 18px;
+    align-self: center;
+  }
+
+  .comment {
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: var(--card2);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-size: 14px;
+    color: #ccc;
+    line-height: 1.5;
+  }
+  .comment.collapsed {
+    max-height: 64px;
+    overflow: hidden;
+    position: relative;
+  }
+  .comment.collapsed::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 30px;
+    background: linear-gradient(transparent, var(--card2));
+  }
+  .comment-toggle {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    text-align: right;
+  }
+
+  /* Bottom controls */
+  .bottombar {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 0;
+    padding: 10px 14px calc(10px + var(--safe-bottom));
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+  }
+  .navbtn {
+    flex: 1;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: 700;
+    border-radius: 14px;
+    border: none;
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .navbtn:active { background: #2a2a2a; transform: scale(0.98); }
+  .navbtn.primary { background: var(--accent); color: #0a0a0a; }
+
+  /* Modal */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal.open { display: flex; }
+  .sheet {
+    width: 100%;
+    max-width: 480px;
+    background: var(--card);
+    border-radius: 16px 16px 0 0;
+    padding: 16px 16px calc(16px + var(--safe-bottom));
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .sheet h3 { margin: 0 0 10px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .sheet button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    background: var(--card2);
+    border: none;
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .sheet button.active { background: var(--accent); color: #0a0a0a; font-weight: 700; }
+  .sheet button.danger { color: var(--red); }
+
+  .empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  /* No-select for letter, but allow it for question/option text on long press */
+  .qtext, .option .text, .comment { -webkit-user-select: text; user-select: text; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="topmeta">
+      <div class="left">
+        <span id="counter">0 / 0</span>
+        <span id="filterLabel"></span>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <a class="toolbtn" href="feed.html" style="text-decoration:none;">Feed</a>
+        <a class="toolbtn" href="cheatsheet.html" style="text-decoration:none;">Sheet</a>
+        <button class="toolbtn" id="shuffleBtn">Shuffle</button>
+        <button class="toolbtn" id="filterBtn">Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="empty" id="loading">Loading questions…</div>
+  </div>
+
+  <div class="bottombar" id="bottombar" style="display:none;">
+    <button class="navbtn" id="prevBtn">← Prev</button>
+    <button class="navbtn primary" id="nextBtn">Next →</button>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="sheet" id="sheet"></div>
+  </div>
+
+<script>
+(() => {
+  const STATE_KEY = 'dt_state_v1';
+  const ORDER_KEY = 'dt_order_v1';
+
+  let questions = [];
+  let order = [];           // array of indices into questions
+  let pos = 0;              // current position in order
+  let filter = 'all';       // all | p5 | theme:<name>
+  let commentExpanded = {}; // qid -> bool
+
+  const $ = id => document.getElementById(id);
+
+  /* ---------- persistence ---------- */
+  function saveState() {
+    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, filter, commentExpanded }));
+    localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+  }
+  function loadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      const o = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
+      if (typeof s.pos === 'number') pos = s.pos;
+      if (typeof s.filter === 'string') filter = s.filter;
+      if (s.commentExpanded) commentExpanded = s.commentExpanded;
+      if (Array.isArray(o)) order = o;
+    } catch (e) {}
+  }
+
+  /* ---------- order / filter ---------- */
+  function applyFilter() {
+    let pool;
+    if (filter === 'p5') {
+      pool = questions.map((q, i) => i).filter(i => questions[i].points === '5 Points');
+    } else if (filter.startsWith('theme:')) {
+      const t = filter.slice(6);
+      pool = questions.map((q, i) => i).filter(i => questions[i].theme_name === t);
+    } else {
+      pool = questions.map((_, i) => i);
+    }
+    order = pool;
+    pos = 0;
+    saveState();
+  }
+
+  function shuffle() {
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    pos = 0;
+    saveState();
+    render();
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    if (!order.length) {
+      $('stage').innerHTML = '<div class="empty">No questions match this filter.</div>';
+      $('bottombar').style.display = 'none';
+      $('counter').textContent = '0 / 0';
+      $('progressFill').style.width = '0%';
+      return;
+    }
+    pos = Math.max(0, Math.min(pos, order.length - 1));
+    const q = questions[order[pos]];
+    const correctSet = new Set((q.correct_answers || []).map(c => c.letter));
+    const isP5 = q.points === '5 Points';
+
+    $('counter').textContent = `${pos + 1} / ${order.length}`;
+    $('progressFill').style.width = `${((pos + 1) / order.length) * 100}%`;
+    $('filterLabel').textContent = filter === 'all' ? '' : (filter === 'p5' ? '· 5-pt only' : '· ' + filter.slice(6));
+
+    let media = '';
+    if (q.image_urls && q.image_urls.length) {
+      media = `<div class="media"><img loading="lazy" src="${escapeAttr(q.image_urls[0])}" alt="" /></div>`;
+    } else if (q.video_urls && q.video_urls.length) {
+      media = `<div class="media"><video controls playsinline preload="metadata" src="${escapeAttr(q.video_urls[0])}"></video></div>`;
+    }
+
+    const opts = (q.options || []).map(o => {
+      const correct = correctSet.has(o.letter);
+      return `<div class="option ${correct ? 'correct' : ''}">
+        <span class="letter">${escapeHtml(o.letter)}</span>
+        <span class="text">${escapeHtml(o.text)}</span>
+      </div>`;
+    }).join('');
+
+    const expanded = commentExpanded[q.question_id];
+    const commentHtml = q.comment ? `
+      <div class="comment ${expanded ? '' : 'collapsed'}" id="comment">${escapeHtml(q.comment)}</div>
+      <div class="comment-toggle" id="commentToggle">${expanded ? 'Show less' : 'Show explanation'}</div>
+    ` : '';
+
+    $('stage').innerHTML = `
+      <div class="qmeta">
+        <span>${escapeHtml(q.question_id)} · ${escapeHtml(q.theme_name)}</span>
+        <span class="points ${isP5 ? 'p5' : ''}">${escapeHtml(q.points)}</span>
+      </div>
+      <div class="qtext">${escapeHtml(q.question_text)}</div>
+      ${media}
+      <div class="options">${opts}</div>
+      ${commentHtml}
+    `;
+    $('bottombar').style.display = 'flex';
+    $('stage').scrollTop = 0;
+
+    if (q.comment) {
+      $('commentToggle').onclick = () => {
+        commentExpanded[q.question_id] = !commentExpanded[q.question_id];
+        saveState();
+        render();
+      };
+    }
+    saveState();
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  function next() { if (pos < order.length - 1) { pos++; render(); } }
+  function prev() { if (pos > 0) { pos--; render(); } }
+
+  /* ---------- modal / filter sheet ---------- */
+  function openFilterSheet() {
+    const themes = Array.from(new Set(questions.map(q => q.theme_name))).sort();
+    const html = `
+      <h3>Filter</h3>
+      <button class="${filter === 'all' ? 'active' : ''}" data-f="all">All questions (${questions.length})</button>
+      <button class="${filter === 'p5' ? 'active' : ''}" data-f="p5">5-point questions only (${questions.filter(q=>q.points==='5 Points').length})</button>
+      ${themes.map(t => `<button class="${filter === 'theme:' + t ? 'active' : ''}" data-f="theme:${escapeAttr(t)}">${escapeHtml(t)} (${questions.filter(q=>q.theme_name===t).length})</button>`).join('')}
+      <h3 style="margin-top:18px;">Progress</h3>
+      <button class="danger" data-f="reset">Reset progress</button>
+      <button data-f="close" style="margin-top:6px; text-align:center;">Cancel</button>
+    `;
+    $('sheet').innerHTML = html;
+    $('modal').classList.add('open');
+    $('sheet').querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        const f = b.dataset.f;
+        if (f === 'close') { $('modal').classList.remove('open'); return; }
+        if (f === 'reset') {
+          if (confirm('Reset progress and restore default order?')) {
+            localStorage.removeItem(STATE_KEY);
+            localStorage.removeItem(ORDER_KEY);
+            filter = 'all';
+            applyFilter();
+            render();
+          }
+          $('modal').classList.remove('open');
+          return;
+        }
+        filter = f;
+        applyFilter();
+        render();
+        $('modal').classList.remove('open');
+      };
+    });
+  }
+
+  /* ---------- gestures ---------- */
+  function initGestures() {
+    let sx = 0, sy = 0, t0 = 0, tracking = false;
+    document.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; t0 = Date.now(); tracking = true;
+    }, { passive: true });
+    document.addEventListener('touchend', e => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - sx, dy = t.clientY - sy, dt = Date.now() - t0;
+      if (dt < 600 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) next(); else prev();
+      }
+    }, { passive: true });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      else if (e.key === 's' || e.key === 'S') { shuffle(); }
+      else if (e.key === 'f' || e.key === 'F') { openFilterSheet(); }
+    });
+  }
+
+  /* ---------- init ---------- */
+  async function init() {
+    try {
+      const res = await fetch('questions.json');
+      questions = await res.json();
+    } catch (e) {
+      $('loading').textContent = 'Failed to load questions.json';
+      return;
+    }
+
+    loadState();
+    if (!order.length || order.length > questions.length) {
+      applyFilter();
+    }
+
+    $('nextBtn').onclick = next;
+    $('prevBtn').onclick = prev;
+    $('shuffleBtn').onclick = shuffle;
+    $('filterBtn').onclick = openFilterSheet;
+    $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
+
+    initGestures();
+    render();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

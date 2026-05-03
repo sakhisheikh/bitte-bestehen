@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<title>Theory · Cheatsheet</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #161616;
+    --line: #222;
+    --text: #f5f5f5;
+    --muted: #888;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --accent: #60a5fa;
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.4; overscroll-behavior: none; }
+  body { min-height: 100vh; padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+
+  /* Header */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(10,10,10,0.92); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 10px 12px; border-bottom: 1px solid var(--line);
+  }
+  .row1 { display: flex; gap: 8px; align-items: center; }
+  .row1 a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .row1 .title { font-weight: 700; font-size: 14px; flex: 1; text-align: center; }
+  .row1 .count { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .row2 {
+    display: flex; gap: 6px; margin-top: 8px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .row2::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 5px 10px; border-radius: 999px;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--line);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+  .row3 { margin-top: 8px; }
+  .search {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--line); font-size: 14px;
+    -webkit-appearance: none; appearance: none;
+  }
+  .search::placeholder { color: var(--muted); }
+
+  /* Main */
+  main { padding: 0 0 60px; }
+  .theme-h {
+    position: sticky; top: 0; z-index: 5;
+    background: #111; padding: 10px 12px 6px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.6px;
+    color: var(--accent); text-transform: uppercase;
+  }
+  .chapter-h {
+    padding: 8px 12px 4px;
+    font-size: 11px; color: var(--muted); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    background: #0d0d0d;
+  }
+  .q {
+    display: flex; gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    align-items: flex-start;
+  }
+  .q .pts {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    background: #2a2a2a; color: #ddd;
+    font-size: 10px; font-weight: 800;
+  }
+  .q .pts.p5 { background: rgba(239,68,68,0.18); color: var(--red); }
+  .q .pts.p4 { background: rgba(245,158,11,0.18); color: var(--orange); }
+  .q .body { flex: 1; min-width: 0; }
+  .q .qid { font-size: 10px; color: var(--muted); font-family: ui-monospace, "SF Mono", monospace; }
+  .q .qtext { color: var(--text); font-size: 14px; line-height: 1.35; margin: 1px 0 3px; }
+  .q .a-inline { font-size: 13.5px; color: var(--green); font-weight: 600; }
+  .q .a-list { margin: 2px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+  .q .a-list li {
+    color: var(--green); font-size: 13px;
+    padding-left: 12px; position: relative;
+  }
+  .q .a-list li::before {
+    content: "✓"; position: absolute; left: 0; top: 0;
+    font-weight: 700; color: var(--green);
+  }
+  .q .media {
+    flex-shrink: 0;
+    width: 64px; height: 64px;
+    border-radius: 6px; overflow: hidden;
+    background: #000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .q .media img, .q .media video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .q .media .vbadge {
+    position: absolute; font-size: 11px; color: white;
+    background: rgba(0,0,0,0.55); padding: 1px 4px; border-radius: 3px;
+    pointer-events: none;
+  }
+  .q .media-wrap { position: relative; flex-shrink: 0; }
+  .q .media .vtile {
+    width: 100%; height: 100%;
+    background: #1f1f1f; color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700;
+  }
+
+  .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+
+  /* Print / PDF */
+  @media print {
+    :root { --bg: #fff; --card: #fff; --text: #111; --muted: #555; --line: #ddd; --accent: #2563eb; --green: #15803d; --red: #b91c1c; --orange: #b45309; }
+    body { background: #fff; color: #111; font-size: 11pt; }
+    .topbar, .row2, .row3, .row1 a, .row1 .count { display: none !important; }
+    .row1 .title { font-size: 16pt; margin: 0 0 8pt; text-align: left; }
+    .topbar { position: static; border: 0; padding: 0 0 8pt; backdrop-filter: none; background: #fff; }
+    .theme-h { position: static; background: #fff; color: #2563eb; border-color: #ccc; page-break-before: always; }
+    .theme-h:first-of-type { page-break-before: auto; }
+    .chapter-h { background: #fff; color: #555; }
+    .q { border-color: #eee; page-break-inside: avoid; }
+    .q .pts { background: #f3f4f6; color: #111; }
+    .q .pts.p5 { background: #fee2e2; color: #b91c1c; }
+    .q .pts.p4 { background: #fef3c7; color: #b45309; }
+    .q .a-inline, .q .a-list li { color: #15803d; }
+    .q .media { width: 48px; height: 48px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .q .media img { width: 100%; height: 100%; object-fit: cover; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .q .media .vtile { background: #f3f4f6; color: #2563eb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .q .media video { display: none; }
+    .vbadge { display: none; }
+  }
+
+  /* Compact mode toggles */
+  .hide-on-print { /* placeholder */ }
+
+  /* Floating action button: print */
+  .fab {
+    position: fixed; right: 14px; bottom: calc(14px + var(--safe-bottom));
+    background: var(--accent); color: #0a0a0a;
+    width: 50px; height: 50px; border-radius: 25px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; border: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    cursor: pointer; z-index: 30;
+  }
+  .fab:active { transform: scale(0.95); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="row1">
+      <a href="./">← Quiz</a>
+      <a href="feed.html">Feed</a>
+      <span class="title">Cheatsheet</span>
+      <span class="count" id="count">…</span>
+    </div>
+    <div class="row2" id="chips"></div>
+    <div class="row3"><input class="search" id="search" placeholder="Search question or answer…" type="search" /></div>
+  </header>
+
+  <main id="main"><div class="empty">Loading…</div></main>
+
+  <button class="fab" id="printFab" title="Print / Save as PDF">⎙</button>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let questions = [];
+  let activeTheme = 'all';
+  let query = '';
+  let io = null; // IntersectionObserver for lazy media
+
+  async function init() {
+    try {
+      questions = await (await fetch('questions.json')).json();
+    } catch (e) {
+      $('main').innerHTML = '<div class="empty">Failed to load questions.json</div>';
+      return;
+    }
+    buildChips();
+    $('search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); renderDebounced(); });
+    $('printFab').onclick = onPrintClick;
+    window.addEventListener('beforeprint', () => { eagerLoadAllImages(); });
+    render();
+  }
+
+  // Eagerly set src on every lazy image so they're in the document for print/PDF.
+  function eagerLoadAllImages() {
+    const imgs = document.querySelectorAll('img[data-src]');
+    imgs.forEach(img => {
+      img.src = img.dataset.src;
+      delete img.dataset.src;
+    });
+    if (io) {
+      document.querySelectorAll('img').forEach(img => io.unobserve(img));
+    }
+  }
+
+  // Wait for every image in the document to finish loading (or fail).
+  function waitForAllImages() {
+    const imgs = Array.from(document.querySelectorAll('img'));
+    return Promise.all(imgs.map(img => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(res => {
+        const done = () => res();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        // safety timeout
+        setTimeout(done, 8000);
+      });
+    }));
+  }
+
+  // Replace each <video> with a small "▶ video" tile so the PDF has a clean
+  // placeholder. We can't draw the video into a canvas because the media bucket
+  // doesn't return CORS headers, which would taint the canvas.
+  function replaceVideosWithTiles() {
+    document.querySelectorAll('video').forEach(v => {
+      const tile = document.createElement('div');
+      tile.className = 'vtile';
+      tile.textContent = '▶';
+      v.replaceWith(tile);
+    });
+  }
+
+  async function onPrintClick() {
+    const fab = $('printFab');
+    const originalText = fab.textContent;
+    fab.disabled = true;
+    fab.textContent = '…';
+    try {
+      eagerLoadAllImages();
+      replaceVideosWithTiles();
+      await waitForAllImages();
+      // give layout one frame to settle
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    } finally {
+      fab.textContent = originalText;
+      fab.disabled = false;
+    }
+    window.print();
+  }
+
+  function buildChips() {
+    const themes = Array.from(new Set(questions.map(q => q.theme_name)));
+    const chips = [
+      `<button class="chip active" data-t="all">All (${questions.length})</button>`,
+      `<button class="chip" data-t="p5">5-pt only (${questions.filter(q => q.points==='5 Points').length})</button>`,
+      ...themes.map(t => `<button class="chip" data-t="theme:${escAttr(t)}">${esc(t)}</button>`)
+    ].join('');
+    $('chips').innerHTML = chips;
+    $('chips').querySelectorAll('.chip').forEach(b => {
+      b.onclick = () => {
+        $('chips').querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        activeTheme = b.dataset.t;
+        window.scrollTo(0, 0);
+        render();
+      };
+    });
+  }
+
+  function filtered() {
+    let list = questions;
+    if (activeTheme === 'p5') list = list.filter(q => q.points === '5 Points');
+    else if (activeTheme.startsWith('theme:')) {
+      const t = activeTheme.slice(6);
+      list = list.filter(q => q.theme_name === t);
+    }
+    if (query) {
+      list = list.filter(q => {
+        if ((q.question_text || '').toLowerCase().includes(query)) return true;
+        if ((q.correct_answers || []).some(a => (a.text || '').toLowerCase().includes(query))) return true;
+        if ((q.question_id || '').toLowerCase().includes(query)) return true;
+        return false;
+      });
+    }
+    return list;
+  }
+
+  let renderTimer;
+  function renderDebounced() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 120); }
+
+  function render() {
+    const list = filtered();
+    $('count').textContent = list.length + ' Q';
+    if (!list.length) {
+      $('main').innerHTML = '<div class="empty">No matches.</div>';
+      return;
+    }
+
+    // group by theme then chapter
+    const groups = new Map();
+    for (const q of list) {
+      const tk = q.theme_name;
+      if (!groups.has(tk)) groups.set(tk, new Map());
+      const chMap = groups.get(tk);
+      const ck = q.chapter_name;
+      if (!chMap.has(ck)) chMap.set(ck, []);
+      chMap.get(ck).push(q);
+    }
+
+    const html = [];
+    for (const [theme, chMap] of groups) {
+      html.push(`<div class="theme-h">${esc(theme)}</div>`);
+      for (const [chapter, qs] of chMap) {
+        html.push(`<div class="chapter-h">${esc(chapter)}</div>`);
+        for (const q of qs) html.push(qRow(q));
+      }
+    }
+    $('main').innerHTML = html.join('');
+    setupLazyMedia();
+  }
+
+  function qRow(q) {
+    const pts = (q.points || '').match(/\d/);
+    const ptsN = pts ? pts[0] : '';
+    const ptsCls = ptsN === '5' ? 'p5' : (ptsN === '4' ? 'p4' : '');
+    const correct = q.correct_answers || [];
+    const totalLen = correct.reduce((n, a) => n + (a.text || '').length, 0);
+    const inline = correct.length === 1 && totalLen <= 60;
+
+    let answersHtml;
+    if (inline) {
+      answersHtml = `<div class="a-inline">→ ${esc(correct[0].text)}</div>`;
+    } else if (correct.length && totalLen <= 90 && correct.every(a => (a.text||'').length < 50)) {
+      // short list: inline separated
+      answersHtml = `<div class="a-inline">→ ${correct.map(a => esc(a.text)).join(' · ')}</div>`;
+    } else {
+      answersHtml = `<ul class="a-list">${correct.map(a => `<li>${esc(a.text)}</li>`).join('')}</ul>`;
+    }
+
+    let mediaHtml = '';
+    if (q.image_urls && q.image_urls.length) {
+      mediaHtml = `<div class="media-wrap"><div class="media"><img data-src="${escAttr(q.image_urls[0])}" loading="lazy" alt=""/></div></div>`;
+    } else if (q.video_urls && q.video_urls.length) {
+      mediaHtml = `<div class="media-wrap"><div class="media"><video data-src="${escAttr(q.video_urls[0])}" muted playsinline preload="none"></video></div><span class="vbadge">▶</span></div>`;
+    }
+
+    return `<div class="q">
+      <div class="pts ${ptsCls}">${ptsN}</div>
+      ${mediaHtml}
+      <div class="body">
+        <div class="qid">${esc(q.question_id)}</div>
+        <div class="qtext">${esc(q.question_text)}</div>
+        ${answersHtml}
+      </div>
+    </div>`;
+  }
+
+  function setupLazyMedia() {
+    if (io) io.disconnect();
+    io = new IntersectionObserver(entries => {
+      for (const ent of entries) {
+        if (!ent.isIntersecting) continue;
+        const el = ent.target;
+        const src = el.dataset.src;
+        if (!src) continue;
+        if (el.tagName === 'IMG') el.src = src;
+        else if (el.tagName === 'VIDEO') {
+          el.src = src;
+          el.preload = 'metadata';
+          // seek to first frame to render a poster-ish thumbnail
+          el.addEventListener('loadedmetadata', () => { try { el.currentTime = 0.1; } catch(_) {} }, { once: true });
+        }
+        delete el.dataset.src;
+        io.unobserve(el);
+      }
+    }, { rootMargin: '300px 0px' });
+    document.querySelectorAll('[data-src]').forEach(el => io.observe(el));
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escAttr(s) { return esc(s); }
+
+  init();
+})();
+</script>
+</body>
+</html>
