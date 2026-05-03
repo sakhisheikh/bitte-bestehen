@@ -374,9 +374,21 @@
         else if (el.tagName === 'VIDEO') {
           el.src = src;
           el.preload = 'metadata';
+          // Seek to last frame for the memorization-anchor thumbnail.
           el.addEventListener('loadedmetadata', () => {
-            try { el.currentTime = 0.1; } catch(_) {}
+            try {
+              const d = el.duration;
+              el.currentTime = (d && isFinite(d) && d > 0.4) ? Math.max(0.1, d - 0.1) : 0.1;
+            } catch(_) {}
           }, { once: true });
+          // First time the user actually plays, restart from the beginning
+          // so they see the scenario unfold, not just the last second.
+          el.addEventListener('play', function onFirstPlay() {
+            el.removeEventListener('play', onFirstPlay);
+            if (el.duration && Math.abs(el.duration - el.currentTime) < 1) {
+              el.currentTime = 0;
+            }
+          });
         }
         delete el.dataset.src;
         mediaIO.unobserve(el);

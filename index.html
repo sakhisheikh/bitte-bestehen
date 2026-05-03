@@ -392,9 +392,9 @@
 
     let media = '';
     if (q.image_urls && q.image_urls.length) {
-      media = `<div class="media"><img loading="lazy" src="${escapeAttr(q.image_urls[0])}" alt="" /></div>`;
+      media = `<div class="media"><img loading="lazy" decoding="async" src="${escapeAttr(q.image_urls[0])}" alt="" /></div>`;
     } else if (q.video_urls && q.video_urls.length) {
-      media = `<div class="media"><video controls playsinline preload="metadata" src="${escapeAttr(q.video_urls[0])}"></video></div>`;
+      media = `<div class="media"><video id="qvideo" controls playsinline preload="metadata" src="${escapeAttr(q.video_urls[0])}"></video></div>`;
     }
 
     const opts = (q.options || []).map(o => {
@@ -437,6 +437,24 @@
         render();
       };
     }
+
+    // Wire up last-frame thumbnail + first-play reset for video questions.
+    const v = document.getElementById('qvideo');
+    if (v) {
+      v.addEventListener('loadedmetadata', () => {
+        try {
+          const d = v.duration;
+          v.currentTime = (d && isFinite(d) && d > 0.4) ? Math.max(0.1, d - 0.1) : 0.1;
+        } catch(_) {}
+      }, { once: true });
+      v.addEventListener('play', function onFirstPlay() {
+        v.removeEventListener('play', onFirstPlay);
+        if (v.duration && Math.abs(v.duration - v.currentTime) < 1) {
+          v.currentTime = 0;
+        }
+      });
+    }
+
     saveState();
   }
 

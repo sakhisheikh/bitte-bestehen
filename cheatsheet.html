@@ -453,8 +453,14 @@
         else if (el.tagName === 'VIDEO') {
           el.src = src;
           el.preload = 'metadata';
-          // seek to first frame to render a poster-ish thumbnail
-          el.addEventListener('loadedmetadata', () => { try { el.currentTime = 0.1; } catch(_) {} }, { once: true });
+          // Seek to last frame: that's the resolved scenario the user remembers.
+          // Falls back to first frame for very short videos or unknown duration.
+          el.addEventListener('loadedmetadata', () => {
+            try {
+              const d = el.duration;
+              el.currentTime = (d && isFinite(d) && d > 0.4) ? Math.max(0.1, d - 0.1) : 0.1;
+            } catch(_) {}
+          }, { once: true });
         }
         delete el.dataset.src;
         io.unobserve(el);
