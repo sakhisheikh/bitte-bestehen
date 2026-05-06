@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+
+<title>Bitte Bestehen — Signs</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+
+<script src="app-shared.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #161616;
+    --card2: #1f1f1f;
+    --line: #222;
+    --text: #f5f5f5;
+    --muted: #888;
+    --green: #22c55e;
+    --accent: #60a5fa;
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.4; }
+  body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(10,10,10,0.92); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 12px;
+  }
+  .row1 { display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .row1 a { color: var(--accent); text-decoration: none; font-weight: 700; }
+  .row1 .title { flex: 1; text-align: center; color: var(--text); font-weight: 700; font-size: 14px; }
+  .toolbtn {
+    background: var(--card2); color: var(--text); border: none;
+    padding: 6px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .row2 {
+    display: flex; gap: 6px; margin-top: 8px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .row2::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 5px 10px; border-radius: 999px;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--line);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+  .row3 { margin-top: 8px; }
+  .search {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    background: var(--card2); color: var(--text);
+    border: 1px solid var(--card2); font-size: 14px;
+    -webkit-appearance: none; appearance: none;
+  }
+
+  main { padding: 12px 12px 80px; max-width: 1100px; margin: 0 auto; }
+
+  .cat-h {
+    margin: 18px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px; font-weight: 800; color: var(--accent);
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  @media (min-width: 600px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  }
+
+  .sign {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px;
+    display: flex; flex-direction: column;
+    gap: 6px;
+  }
+  .sign .img-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #fff;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .sign .img-wrap img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain; display: block;
+  }
+  .sign .meaning {
+    font-size: 13px; line-height: 1.35;
+    color: var(--text);
+  }
+  .sign .meaning strong { color: var(--green); }
+  .sign .qid {
+    font-size: 10px; color: var(--muted);
+    font-family: ui-monospace, "SF Mono", monospace;
+  }
+
+  .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+
+  .fab {
+    position: fixed; right: 14px; bottom: calc(14px + var(--safe-bottom));
+    background: var(--card); color: var(--text);
+    width: 44px; height: 44px; border-radius: 22px;
+    display: none; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; border: 1px solid var(--line);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    cursor: pointer; z-index: 40;
+  }
+  .fab.show { display: flex; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="row1">
+      <a href="./">←</a>
+      <a href="rules.html">Rules</a>
+      <a href="cheatsheet.html">Sheet</a>
+      <span class="title" id="titleEl">Signs</span>
+      <button class="toolbtn" id="langBtn">EN</button>
+      <span id="count" style="font-size:11px;color:var(--muted);"></span>
+    </div>
+    <div class="row2" id="chips"></div>
+    <div class="row3"><input class="search" id="search" type="search" placeholder="Search meaning…" /></div>
+  </header>
+
+  <main id="main"><div class="empty">Loading…</div></main>
+
+  <button class="fab" id="topFab">↑</button>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const STATE_KEY = 'dt_state_v1';
+
+  let active = 'all'; // all | danger | regulatory | directional | facilities
+  let lang = 'en';
+  let query = '';
+
+  // Map our chip key → English chapter_name (structural). Use this for filtering.
+  const CHAPTERS = {
+    danger:       { en: 'Danger signs',       de: 'Gefahrenzeichen',     names: ['Danger Sign'] },
+    regulatory:   { en: 'Regulatory signs',   de: 'Vorschriftzeichen',   names: ['Regulatory Sign'] },
+    directional:  { en: 'Directional signs',  de: 'Richtungszeichen',    names: ['Directional Sign'] },
+    facilities:   { en: 'Traffic facilities', de: 'Verkehrseinrichtungen', names: ['Traffic Facilities'] }
+  };
+
+  const T = (en, de) => lang === 'de' ? de : en;
+
+  function loadLang() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      if (s.lang === 'en' || s.lang === 'de') lang = s.lang;
+    } catch {}
+    const u = new URLSearchParams(location.search).get('lang');
+    if (u === 'en' || u === 'de') lang = u;
+  }
+  function saveLang() {
+    try {
+      const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      cur.lang = lang;
+      localStorage.setItem(STATE_KEY, JSON.stringify(cur));
+    } catch {}
+  }
+
+  // Get all sign indices (questions in theme 1.4 or 2.4 with image) by chapter key
+  function indicesForCategory(catKey) {
+    const out = [];
+    for (let i = 0; i < DT.totalCount(); i++) {
+      const s = DT.structural(i);
+      if (s.theme_number !== 'Theme 1.4.' && s.theme_number !== 'Theme 2.4.') continue;
+      if (!(s.image_urls && s.image_urls.length)) continue;
+      if (catKey === 'all' || CHAPTERS[catKey]?.names.includes(s.chapter_name)) {
+        out.push(i);
+      }
+    }
+    return out;
+  }
+
+  function categoryOf(i) {
+    const s = DT.structural(i);
+    for (const [k, v] of Object.entries(CHAPTERS)) {
+      if (v.names.includes(s.chapter_name)) return k;
+    }
+    return null;
+  }
+
+  function meaningFor(q) {
+    // Use correct answer texts; if absent, fall back to the question text.
+    const ans = (q.correct_answers || [])
+      .map(c => (c.text || c.letter || '').trim())
+      .filter(Boolean);
+    if (ans.length) return ans.join(' · ');
+    return q.question_text || '';
+  }
+
+  function buildChips() {
+    const counts = { all: 0 };
+    for (const k of Object.keys(CHAPTERS)) counts[k] = 0;
+    for (let i = 0; i < DT.totalCount(); i++) {
+      const s = DT.structural(i);
+      if (s.theme_number !== 'Theme 1.4.' && s.theme_number !== 'Theme 2.4.') continue;
+      if (!(s.image_urls && s.image_urls.length)) continue;
+      counts.all++;
+      const c = categoryOf(i);
+      if (c) counts[c]++;
+    }
+    const html = [
+      `<button class="chip ${active==='all'?'active':''}" data-c="all">${T('All','Alle')} (${counts.all})</button>`,
+      ...Object.entries(CHAPTERS).map(([k, v]) =>
+        `<button class="chip ${active===k?'active':''}" data-c="${k}">${esc(T(v.en, v.de))} (${counts[k]||0})</button>`)
+    ].join('');
+    $('chips').innerHTML = html;
+    $('chips').querySelectorAll('.chip').forEach(b => {
+      b.onclick = () => { active = b.dataset.c; render(); };
+    });
+  }
+
+  let renderTimer;
+  function renderDebounced() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 120); }
+
+  function render() {
+    document.documentElement.lang = lang;
+    $('langBtn').textContent = lang.toUpperCase();
+    $('search').placeholder = T('Search meaning…', 'Bedeutung suchen…');
+
+    const idxs = indicesForCategory(active).filter(i => {
+      if (!query) return true;
+      const q = DT.getQ(i, lang);
+      return meaningFor(q).toLowerCase().includes(query) ||
+             (q.question_text || '').toLowerCase().includes(query);
+    });
+
+    $('count').textContent = idxs.length;
+    if (!idxs.length) {
+      $('main').innerHTML = `<div class="empty">${T('No matches.', 'Keine Treffer.')}</div>`;
+      return;
+    }
+
+    // Group by chapter only when 'all'
+    const html = [];
+    if (active === 'all') {
+      const groups = {};
+      for (const i of idxs) {
+        const k = categoryOf(i) || 'other';
+        (groups[k] ||= []).push(i);
+      }
+      for (const k of Object.keys(CHAPTERS)) {
+        if (!groups[k] || !groups[k].length) continue;
+        html.push(`<div class="cat-h">${esc(T(CHAPTERS[k].en, CHAPTERS[k].de))} (${groups[k].length})</div>`);
+        html.push('<div class="grid">');
+        for (const i of groups[k]) html.push(card(i));
+        html.push('</div>');
+      }
+    } else {
+      const k = active;
+      html.push(`<div class="cat-h">${esc(T(CHAPTERS[k].en, CHAPTERS[k].de))} (${idxs.length})</div>`);
+      html.push('<div class="grid">');
+      for (const i of idxs) html.push(card(i));
+      html.push('</div>');
+    }
+    $('main').innerHTML = html.join('');
+  }
+
+  function card(i) {
+    const q = DT.getQ(i, lang);
+    const url = (q.image_urls && q.image_urls[0]) || '';
+    return `<div class="sign">
+      <div class="img-wrap"><img src="${escAttr(url)}" loading="lazy" decoding="async" alt=""/></div>
+      <div class="meaning">${esc(meaningFor(q))}</div>
+      <div class="qid">${esc(q.question_id)}</div>
+    </div>`;
+  }
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escAttr(s) { return esc(s); }
+
+  async function init() {
+    try { await DT.load(); }
+    catch (e) { $('main').innerHTML = '<div class="empty">Failed to load.</div>'; return; }
+    loadLang();
+    $('langBtn').onclick = () => {
+      lang = lang === 'en' ? 'de' : 'en';
+      saveLang();
+      buildChips();
+      render();
+    };
+    $('search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); renderDebounced(); });
+    $('topFab').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 600) $('topFab').classList.add('show');
+      else $('topFab').classList.remove('show');
+    }, { passive: true });
+    buildChips();
+    render();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  init();
+})();
+</script>
+</body>
+</html>
