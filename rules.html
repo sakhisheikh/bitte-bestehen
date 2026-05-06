@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+
+<title>Bitte Bestehen — Rule Book</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #161616;
+    --card2: #1f1f1f;
+    --line: #222;
+    --text: #f5f5f5;
+    --muted: #888;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f59e0b;
+    --accent: #60a5fa;
+    --num: #fbbf24;
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.55; }
+  body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(10,10,10,0.92); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 12px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .topbar a, .topbar button {
+    color: var(--accent); text-decoration: none; font-weight: 700;
+    background: transparent; border: none; font-size: 14px; cursor: pointer;
+    padding: 6px 8px;
+  }
+  .topbar .title { flex: 1; text-align: center; color: var(--text); font-weight: 700; font-size: 14px; }
+  .toolbtn {
+    background: var(--card2); color: var(--text); border: none;
+    padding: 6px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .toolbtn.active { background: var(--accent); color: #0a0a0a; }
+
+  main { max-width: 720px; margin: 0 auto; padding: 16px 18px 80px; }
+
+  h2 {
+    margin: 32px 0 8px; padding-top: 8px;
+    border-top: 1px solid var(--line);
+    font-size: 18px; font-weight: 800; color: var(--accent);
+    letter-spacing: 0.2px;
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+  h3 {
+    margin: 18px 0 6px;
+    font-size: 14px; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 10px; padding-left: 22px; }
+  li { margin: 3px 0; }
+
+  /* Number highlight — key memorization fact */
+  .n { color: var(--num); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .crit { color: var(--red); font-weight: 700; }
+
+  table {
+    width: 100%; margin: 8px 0 14px;
+    border-collapse: collapse; font-size: 14px;
+    background: var(--card); border-radius: 8px; overflow: hidden;
+  }
+  th, td {
+    padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  th { background: var(--card2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  td.num { color: var(--num); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .toc {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 24px;
+  }
+  .toc h3 { margin: 0 0 4px; }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 12px; }
+  .toc a { color: var(--accent); text-decoration: none; font-size: 13px; line-height: 1.7; }
+
+  .callout {
+    margin: 8px 0 14px;
+    padding: 10px 12px;
+    background: rgba(96,165,250,0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 13px; color: #d4d4d4;
+  }
+  .warn {
+    background: rgba(239,68,68,0.10);
+    border-left-color: var(--red);
+    color: #f5d7d7;
+  }
+
+  /* Lang switching */
+  body[data-lang="en"] .de-only,
+  body[data-lang="de"] .en-only { display: none; }
+
+  .fab {
+    position: fixed; right: 14px; bottom: calc(14px + var(--safe-bottom));
+    background: var(--card); color: var(--text);
+    width: 44px; height: 44px; border-radius: 22px;
+    display: none; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; border: 1px solid var(--line);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    cursor: pointer; z-index: 40;
+  }
+  .fab.show { display: flex; }
+</style>
+</head>
+<body data-lang="en">
+  <header class="topbar">
+    <a href="./">←</a>
+    <a href="feed.html">Feed</a>
+    <a href="cheatsheet.html">Sheet</a>
+    <span class="title">Rule Book — Klasse B</span>
+    <button class="toolbtn" id="langBtn">EN</button>
+  </header>
+
+  <main>
+
+  <!-- ============================ ENGLISH ============================ -->
+  <div class="en-only">
+    <div class="callout">
+      Pure-rules digest for the German driving theory exam (Klasse B). All key numbers are <span class="n">highlighted</span>. Read top-to-bottom once before drilling questions; come back to anything you blank on.
+    </div>
+
+    <div class="toc">
+      <h3>Contents</h3>
+      <ol>
+        <li><a href="#speed">Speed limits</a></li>
+        <li><a href="#distance">Distances</a></li>
+        <li><a href="#stopping">Stopping &amp; reaction</a></li>
+        <li><a href="#alcohol">Alcohol &amp; drugs</a></li>
+        <li><a href="#priority">Priority rules</a></li>
+        <li><a href="#lights">Lights</a></li>
+        <li><a href="#signs">Signs</a></li>
+        <li><a href="#parking">Parking &amp; stopping</a></li>
+        <li><a href="#probation">Probationary period</a></li>
+        <li><a href="#tires">Tires &amp; winter</a></li>
+        <li><a href="#trailer">Trailers</a></li>
+        <li><a href="#equipment">Documents &amp; equipment</a></li>
+        <li><a href="#points">Penalty points</a></li>
+        <li><a href="#defensive">Defensive driving</a></li>
+        <li><a href="#environment">Environment</a></li>
+        <li><a href="#special">Special situations</a></li>
+      </ol>
+    </div>
+
+    <h2 id="speed">1. Speed limits</h2>
+    <table>
+      <tr><th>Where</th><th>Limit</th></tr>
+      <tr><td>Built-up area (innerorts)</td><td class="num">50 km/h</td></tr>
+      <tr><td>Tempo 30 zone</td><td class="num">30 km/h</td></tr>
+      <tr><td>Residential play zone (verkehrsberuhigt)</td><td class="num">walking pace (~7 km/h)</td></tr>
+      <tr><td>Outside built-up — single carriageway, car</td><td class="num">100 km/h</td></tr>
+      <tr><td>Outside built-up — car with trailer</td><td class="num">80 km/h</td></tr>
+      <tr><td>Outside built-up — car with approved 100-km/h trailer</td><td class="num">100 km/h</td></tr>
+      <tr><td>Motorway — recommended speed (Richtgeschwindigkeit)</td><td class="num">130 km/h</td></tr>
+      <tr><td>Motorway — car</td><td class="num">no general limit</td></tr>
+      <tr><td>Motorway — car with trailer</td><td class="num">80 (or 100) km/h</td></tr>
+      <tr><td>Truck &gt; 3.5 t outside built-up</td><td class="num">60 km/h</td></tr>
+      <tr><td>Truck &gt; 3.5 t on motorway</td><td class="num">80 km/h</td></tr>
+    </table>
+    <h3>Modifiers</h3>
+    <ul>
+      <li>Wet roads: speed sign with rain symbol overrides general limit.</li>
+      <li>Visibility &lt; <span class="n">50 m</span> due to fog/snow/rain → max <span class="n">50 km/h</span>, fog rear lamp on.</li>
+      <li>Built-up area starts at the yellow <em>Ortstafel</em> sign and ends at the same sign struck through.</li>
+      <li>"Recommended" 130 on motorway is not enforced, but exceeding it can affect liability in an accident.</li>
+    </ul>
+
+    <h2 id="distance">2. Distances</h2>
+    <h3>Safety distance to vehicle in front</h3>
+    <ul>
+      <li>Outside built-up rule of thumb: <span class="n">half the speedometer in metres</span> (km/h ÷ 2 = metres).</li>
+      <li>"Two-second rule": pick a fixed point; you should not pass it for at least 2 seconds after the car ahead does.</li>
+      <li>Truck &gt; 3.5 t at &gt; 50 km/h on motorway: must keep <span class="n">≥ 50 m</span>.</li>
+    </ul>
+    <h3>Reference distances at common speeds</h3>
+    <table>
+      <tr><th>Speed</th><th>Half-speedo gap</th></tr>
+      <tr><td>50 km/h</td><td class="num">25 m</td></tr>
+      <tr><td>80 km/h</td><td class="num">40 m</td></tr>
+      <tr><td>100 km/h</td><td class="num">50 m</td></tr>
+      <tr><td>130 km/h</td><td class="num">65 m</td></tr>
+    </table>
+    <h3>Distances to road features (parking)</h3>
+    <ul>
+      <li>From an intersection edge: no parking within <span class="n">5 m</span>.</li>
+      <li>From a marked pedestrian crossing (Zebrastreifen): no parking <span class="n">5 m</span> before.</li>
+      <li>From a bus stop sign (H): no parking <span class="n">15 m</span> before/after.</li>
+      <li>From a fire hydrant: keep <span class="n">1 m</span> clear either side.</li>
+      <li>St. Andrew's Cross (railway): no parking within <span class="n">5 m</span> in built-up, <span class="n">50 m</span> outside.</li>
+      <li>Sharp curves, hill crests, narrow spots: no parking and no stopping.</li>
+      <li>Lowered curb (dropped kerb): no parking — it's someone's driveway.</li>
+      <li>Bicycle lane / cycle path: no parking on it.</li>
+    </ul>
+    <h3>When passing</h3>
+    <ul>
+      <li>Side clearance to a cyclist or pedestrian when overtaking: built-up <span class="n">≥ 1.5 m</span>, outside built-up <span class="n">≥ 2 m</span>.</li>
+      <li>Side clearance to an electric scooter: <span class="n">≥ 1.5 m</span> built-up, <span class="n">2 m</span> outside.</li>
+    </ul>
+
+    <h2 id="stopping">3. Stopping &amp; reaction</h2>
+    <p>Total stopping distance = <em>reaction distance</em> + <em>braking distance</em>.</p>
+    <h3>Formulas (km/h, normal braking)</h3>
+    <ul>
+      <li>Reaction distance ≈ <span class="n">(speed ÷ 10) × 3</span> m</li>
+      <li>Braking distance ≈ <span class="n">(speed ÷ 10)²</span> m</li>
+      <li>Emergency braking distance ≈ <span class="n">(speed ÷ 10)² ÷ 2</span> m</li>
+    </ul>
+    <h3>Worked examples</h3>
+    <table>
+      <tr><th>Speed</th><th>Reaction</th><th>Braking</th><th>Total</th></tr>
+      <tr><td>30 km/h</td><td class="num">9</td><td class="num">9</td><td class="num">18 m</td></tr>
+      <tr><td>50 km/h</td><td class="num">15</td><td class="num">25</td><td class="num">40 m</td></tr>
+      <tr><td>70 km/h</td><td class="num">21</td><td class="num">49</td><td class="num">70 m</td></tr>
+      <tr><td>100 km/h</td><td class="num">30</td><td class="num">100</td><td class="num">130 m</td></tr>
+    </table>
+    <h3>What lengthens braking distance</h3>
+    <ul>
+      <li>Wet, icy or snowy roads.</li>
+      <li>Towing an unbraked trailer.</li>
+      <li>Worn brakes or under-inflated tyres.</li>
+      <li>Driving downhill.</li>
+      <li>Heavy load.</li>
+    </ul>
+
+    <h2 id="alcohol">4. Alcohol &amp; drugs</h2>
+    <table>
+      <tr><th>Limit</th><th>Who / when</th><th>Type</th></tr>
+      <tr><td class="num">0.0 ‰</td><td>Probationary period, all drivers under 21</td><td class="crit">Mandatory</td></tr>
+      <tr><td class="num">0.5 ‰</td><td>General BAC limit for licensed drivers</td><td>Administrative offense</td></tr>
+      <tr><td class="num">0.3 ‰</td><td>If signs of impairment or accident occurs</td><td class="crit">Criminal</td></tr>
+      <tr><td class="num">1.1 ‰</td><td>Absolute drunk driving regardless of behavior</td><td class="crit">Criminal</td></tr>
+    </table>
+    <ul>
+      <li>Drugs (illegal): any detectable amount → driving ban + fine + points.</li>
+      <li>Prescribed medicine: only drive if your doctor confirms it doesn't impair you.</li>
+      <li>Alcohol elimination: roughly <span class="n">0.1 ‰ per hour</span> — coffee, fresh air, or food do <em>not</em> speed it up.</li>
+      <li>Even <span class="n">0.3 ‰</span> reduces field of vision, depth perception and reaction time noticeably.</li>
+    </ul>
+
+    <h2 id="priority">5. Priority rules</h2>
+    <p>Order of authority — higher overrides lower:</p>
+    <ol>
+      <li>Police officer's instructions</li>
+      <li>Traffic lights</li>
+      <li>Signs</li>
+      <li>Road markings</li>
+      <li>"Right before left" (rechts vor links)</li>
+    </ol>
+    <h3>Key sign meanings</h3>
+    <ul>
+      <li><strong>Priority road</strong> (yellow diamond on white): you have priority for the duration the sign covers.</li>
+      <li><strong>Give way / yield</strong> (inverted red triangle): yield to crossing traffic, you may keep rolling if clear.</li>
+      <li><strong>Stop</strong> (red octagon): full stop at line/edge, then yield.</li>
+      <li><strong>Roundabout sign with "give way"</strong>: traffic <em>in</em> the roundabout has priority.</li>
+      <li><strong>Roundabout without sign</strong> (rare): right-before-left applies (i.e. entering traffic has priority over those already in).</li>
+    </ul>
+    <h3>Special cases</h3>
+    <ul>
+      <li>Vehicles entering from a private property, parking lot, footpath, field track, or pedestrian zone <em>always</em> yield to road traffic.</li>
+      <li>Trams have priority over road vehicles unless otherwise directed.</li>
+      <li>Emergency vehicles with blue light + siren: clear the way; on motorway form a <strong>rescue lane</strong> between leftmost and second-from-left lanes.</li>
+      <li>Bus pulling out from a stop with indicator on: you must yield (built-up area).</li>
+    </ul>
+
+    <h2 id="lights">6. Lights</h2>
+    <ul>
+      <li><strong>Low beam</strong> (Abblendlicht) — required at dusk, in fog, in heavy rain or snowfall, in tunnels.</li>
+      <li><strong>High beam</strong> (Fernlicht) — outside built-up area when no oncoming traffic and no vehicle in front; switch off in fog (it reflects back).</li>
+      <li><strong>Daytime running lights</strong> — automatic on most cars from 2010+; otherwise switch low beam on.</li>
+      <li><strong>Front fog lamps</strong> (Nebelscheinwerfer) — fog, snowfall, heavy rain.</li>
+      <li><strong>Rear fog lamp</strong> (Nebelschlussleuchte) — <em>only</em> when visibility &lt; <span class="n">50 m</span>; max speed then <span class="n">50 km/h</span>.</li>
+      <li><strong>Hazard lights</strong> (Warnblinker) — when stopped on roadway, towing/being towed, or end-of-jam warning on motorway.</li>
+      <li><strong>Parking lights</strong> — at night in unlit areas where the car isn't otherwise visible.</li>
+    </ul>
+    <div class="callout warn">If you turn the rear fog lamp on with visibility &gt; 50 m, you can be fined and it dazzles drivers behind you.</div>
+
+    <h2 id="signs">7. Signs</h2>
+    <h3>Shape decoding</h3>
+    <ul>
+      <li><strong>Red triangle</strong> — warning of a hazard ahead.</li>
+      <li><strong>Red circle</strong> — prohibition (no entry, no overtaking, speed limit, etc.).</li>
+      <li><strong>Blue circle</strong> — command/obligation (mandatory direction, dedicated lane, minimum speed).</li>
+      <li><strong>Blue rectangle</strong> — informational (motorway, services, route).</li>
+      <li><strong>Octagon</strong> — Stop.</li>
+      <li><strong>Black slash</strong> across a sign — end of that restriction.</li>
+    </ul>
+    <h3>Distance to hazard</h3>
+    <ul>
+      <li>Warning signs are placed approximately <span class="n">150–250 m</span> before the hazard outside built-up area, and <span class="n">≤ 50 m</span> inside.</li>
+      <li>Multiple warnings stacked: the top sign refers to the nearest hazard.</li>
+    </ul>
+
+    <h2 id="parking">8. Parking &amp; stopping</h2>
+    <p>"Stopping" means up to 3 minutes (or while loading/unloading or letting passengers in/out). "Parking" is anything longer.</p>
+    <h3>Where stopping is forbidden</h3>
+    <ul>
+      <li>Sharp bends, hill crests, narrow spots.</li>
+      <li>On the carriageway of a priority road outside built-up area.</li>
+      <li>On level crossings (rail).</li>
+      <li>Where signed (red X / no-stopping).</li>
+      <li>On motorways and dual carriageways (except the hard shoulder in emergencies).</li>
+      <li>In lanes for buses or bicycles.</li>
+    </ul>
+    <h3>Where parking is forbidden (in addition to above)</h3>
+    <ul>
+      <li>Within <span class="n">5 m</span> of an intersection or before a pedestrian crossing.</li>
+      <li>Within <span class="n">15 m</span> of a bus or tram stop sign.</li>
+      <li>In front of dropped kerbs.</li>
+      <li>On marked taxi ranks, parking spaces reserved by sign.</li>
+      <li>Where a no-parking sign applies.</li>
+      <li>"Stopping permitted, parking forbidden" sign: 3-minute window only.</li>
+    </ul>
+    <h3>Slope-parking</h3>
+    <ul>
+      <li>Uphill, kerb available: turn wheels <strong>away from</strong> the kerb.</li>
+      <li>Downhill: turn wheels <strong>towards</strong> the kerb.</li>
+      <li>Always set the handbrake firmly and engage 1st gear (manual) or P (automatic).</li>
+    </ul>
+
+    <h2 id="probation">9. Probationary period (Probezeit)</h2>
+    <ul>
+      <li>Lasts <span class="n">2 years</span> from issuance of first licence.</li>
+      <li>BAC limit during probation: <span class="n">0.0 ‰</span> (also for any driver under 21, regardless of probation status).</li>
+      <li><strong>A-offense</strong> (severe — e.g. running a red, drink-driving, hit-and-run, speeding &gt; 21 km/h): probation extended by 2 years + mandatory <em>Aufbauseminar</em> (advanced training course).</li>
+      <li><strong>B-offense</strong> (lighter — e.g. minor speeding, technical defects): two B-offenses count as one A-offense.</li>
+      <li>Repeated offenses can lead to a recommendation for traffic-psychological consultation.</li>
+    </ul>
+
+    <h2 id="tires">10. Tires &amp; winter</h2>
+    <ul>
+      <li>Legal minimum tread depth: <span class="n">1.6 mm</span>. Recommended: <span class="n">≥ 4 mm</span> for winter, <span class="n">≥ 3 mm</span> for summer.</li>
+      <li>Winter tires (M+S, Alpine snowflake symbol) are <strong>situational mandatory</strong> — required when conditions warrant: snow, slush, black ice, frost.</li>
+      <li>Mismatched tires on the same axle are not allowed.</li>
+      <li>Same axle should have the same tire type, brand and tread pattern.</li>
+      <li>Snow chains: only when the corresponding sign is posted.</li>
+      <li>Tire pressure: check cold, follow vehicle plate; under-inflation increases consumption and stopping distance.</li>
+    </ul>
+
+    <h2 id="trailer">11. Trailers</h2>
+    <ul>
+      <li>Plain Klasse B can pull: trailer up to <span class="n">750 kg</span> regardless of car weight, OR a heavier trailer if combined permissible mass is <span class="n">≤ 3 500 kg</span>.</li>
+      <li>Klasse B96: extends combined permissible mass to <span class="n">4 250 kg</span> (separate training, no exam).</li>
+      <li>Klasse BE: heavy trailers, separate licence and exam.</li>
+      <li>Speed with trailer: <span class="n">80 km/h</span> outside built-up; <span class="n">100 km/h</span> if the trailer has the approved 100-sticker, valid combination.</li>
+      <li>Trailer must have functional lights, brakes (over 750 kg), mudguards, plate.</li>
+      <li>Nose weight (Stützlast) must be observed — too low risks instability, too high overloads the hitch.</li>
+    </ul>
+
+    <h2 id="equipment">12. Documents &amp; equipment</h2>
+    <h3>Always carry</h3>
+    <ul>
+      <li>Driving licence (validity <span class="n">15 years</span> for new Klasse B from 2013, photo update at renewal).</li>
+      <li>Registration certificate Part I (Zulassungsbescheinigung Teil I, formerly Fahrzeugschein). Part II stays at home.</li>
+      <li>Insurance: confirmation electronic via plate.</li>
+    </ul>
+    <h3>Must be in the car</h3>
+    <ul>
+      <li>Warning triangle (Warndreieck) — set up at <span class="n">100 m</span> on motorway, <span class="n">50 m</span> outside built-up, <span class="n">50 m</span> inside built-up.</li>
+      <li>First-aid kit (Verbandkasten) — DIN-compliant, check expiration on contents.</li>
+      <li>High-visibility vest (Warnweste) — wear when leaving the car on the carriageway.</li>
+    </ul>
+
+    <h2 id="points">13. Penalty points (Flensburg)</h2>
+    <ul>
+      <li>Range: <span class="n">1–3 points</span> per offense.</li>
+      <li><span class="n">8 points</span> ⇒ licence withdrawn.</li>
+      <li>Decay: 1 point lasts 2.5 years; 2 points 5 years; 3 points 10 years.</li>
+      <li>Voluntary <em>Fahreignungsseminar</em>: removes 1 point at 1–5 points (only every 5 years).</li>
+      <li>Stages: 1–3 reminder, 4–5 warning, 6–7 written warning, 8 withdrawal.</li>
+    </ul>
+
+    <h2 id="defensive">14. Defensive driving</h2>
+    <ul>
+      <li>Defensive driving means: don't insist on right of way; anticipate other people's mistakes; brake early; leave room.</li>
+      <li>Common rear-end collision causes: tailgating, sudden braking, distraction (phone, food, fatigue).</li>
+      <li>Look ahead: as far as you can — ideally 12 seconds of road.</li>
+      <li>Continuous scanning: mirrors every <span class="n">8–10 s</span>; check blind spot before lane change.</li>
+      <li>Children and elderly: assume they may step off the kerb without looking.</li>
+      <li>Cyclists: assume they may swerve to avoid potholes or door zones.</li>
+      <li>If tired: pull over, sleep <span class="n">15–20 min</span>; coffee is a short bridge, not a fix.</li>
+    </ul>
+
+    <h2 id="environment">15. Environment</h2>
+    <ul>
+      <li>Drive immediately after starting — modern engines warm up under low load, not idling.</li>
+      <li>Switch the engine off when stopped &gt; <span class="n">~20 s</span> (e.g. railway crossing, long red).</li>
+      <li>Maintain correct tire pressure: under-inflation costs fuel and shortens tire life.</li>
+      <li>Remove unused roof racks/boxes — they add drag and increase consumption noticeably.</li>
+      <li>Anticipatory driving: ease off early instead of brake-and-accelerate cycling.</li>
+      <li>Choose the highest gear that still feels relaxed (manual).</li>
+    </ul>
+
+    <h2 id="special">16. Special situations</h2>
+    <h3>Motorway</h3>
+    <ul>
+      <li>Slow traffic / standstill: hazard lights on if approaching from behind at speed; form a rescue lane immediately.</li>
+      <li>End of motorway sign / breakdown: hazard lights on, exit at next slip road or hard shoulder, warning triangle at <span class="n">100 m</span>.</li>
+      <li>Hard shoulder is for emergencies, not stopping or sleeping.</li>
+    </ul>
+    <h3>Tunnels</h3>
+    <ul>
+      <li>Low beam on, sunglasses off, keep distance.</li>
+      <li>Listen to traffic radio; obey light signals and lane indicators above your lane.</li>
+      <li>Breakdown: pull into emergency bay, switch on hazards, leave keys in, go to the nearest emergency phone.</li>
+    </ul>
+    <h3>Trams</h3>
+    <ul>
+      <li>Pass on the right where possible.</li>
+      <li>If the tram is stopped at an island stop and passengers are getting off/on, you may pass at walking pace and only if it doesn't endanger them.</li>
+      <li>Trams have priority over road traffic at junctions, including over right-before-left.</li>
+    </ul>
+    <h3>Pedestrian crossings (Zebrastreifen)</h3>
+    <ul>
+      <li>Pedestrians have absolute priority.</li>
+      <li>You must approach at moderate speed and be ready to stop.</li>
+      <li>No overtaking on or near a Zebrastreifen.</li>
+    </ul>
+    <h3>School zones / residential</h3>
+    <ul>
+      <li>Children unpredictable — assume the worst, drive at most 30 km/h or as posted.</li>
+      <li>Residential play zones (verkehrsberuhigt): walking pace, children may use the whole road.</li>
+    </ul>
+    <h3>Roadworks</h3>
+    <ul>
+      <li>Yellow markings override white.</li>
+      <li>Lanes may narrow — fold mirrors only when stopped, not while driving.</li>
+      <li>Reduced speeds binding.</li>
+    </ul>
+  </div>
+
+  <!-- ============================ DEUTSCH ============================ -->
+  <div class="de-only">
+    <div class="callout">
+      Reine Regel-Übersicht für die Theorieprüfung Klasse B. Alle Schlüsselzahlen sind <span class="n">hervorgehoben</span>. Einmal von oben nach unten lesen, dann die Fragen üben — und bei Lücken zurückblättern.
+    </div>
+
+    <div class="toc">
+      <h3>Inhalt</h3>
+      <ol>
+        <li><a href="#speed">Geschwindigkeit</a></li>
+        <li><a href="#distance">Abstände</a></li>
+        <li><a href="#stopping">Anhalte- &amp; Reaktionsweg</a></li>
+        <li><a href="#alcohol">Alkohol &amp; Drogen</a></li>
+        <li><a href="#priority">Vorfahrt</a></li>
+        <li><a href="#lights">Beleuchtung</a></li>
+        <li><a href="#signs">Verkehrszeichen</a></li>
+        <li><a href="#parking">Halten &amp; Parken</a></li>
+        <li><a href="#probation">Probezeit</a></li>
+        <li><a href="#tires">Reifen &amp; Winter</a></li>
+        <li><a href="#trailer">Anhänger</a></li>
+        <li><a href="#equipment">Dokumente &amp; Ausrüstung</a></li>
+        <li><a href="#points">Punkte (Flensburg)</a></li>
+        <li><a href="#defensive">Defensives Fahren</a></li>
+        <li><a href="#environment">Umwelt</a></li>
+        <li><a href="#special">Besondere Situationen</a></li>
+      </ol>
+    </div>
+
+    <h2 id="speed">1. Geschwindigkeit</h2>
+    <table>
+      <tr><th>Wo</th><th>Limit</th></tr>
+      <tr><td>Innerorts</td><td class="num">50 km/h</td></tr>
+      <tr><td>Tempo-30-Zone</td><td class="num">30 km/h</td></tr>
+      <tr><td>Verkehrsberuhigter Bereich</td><td class="num">Schrittgeschwindigkeit (~7 km/h)</td></tr>
+      <tr><td>Außerorts — Pkw</td><td class="num">100 km/h</td></tr>
+      <tr><td>Außerorts — Pkw mit Anhänger</td><td class="num">80 km/h</td></tr>
+      <tr><td>Außerorts — Pkw mit 100-km/h-Anhänger</td><td class="num">100 km/h</td></tr>
+      <tr><td>Autobahn — Richtgeschwindigkeit</td><td class="num">130 km/h</td></tr>
+      <tr><td>Autobahn — Pkw</td><td class="num">kein generelles Limit</td></tr>
+      <tr><td>Autobahn — Pkw mit Anhänger</td><td class="num">80 (oder 100) km/h</td></tr>
+      <tr><td>Lkw &gt; 3,5 t außerorts</td><td class="num">60 km/h</td></tr>
+      <tr><td>Lkw &gt; 3,5 t auf der Autobahn</td><td class="num">80 km/h</td></tr>
+    </table>
+    <h3>Zusatzregeln</h3>
+    <ul>
+      <li>Nasse Fahrbahn: Schild mit Regen-Symbol gilt zusätzlich.</li>
+      <li>Sicht &lt; <span class="n">50 m</span> durch Nebel/Schneefall/Regen → max. <span class="n">50 km/h</span>, Nebelschlussleuchte ein.</li>
+      <li>Innerorts beginnt am gelben <em>Ortstafel</em>-Schild und endet am durchgestrichenen.</li>
+      <li>Die Richtgeschwindigkeit 130 ist nicht direkt strafbar, kann aber bei einem Unfall die Haftung erhöhen.</li>
+    </ul>
+
+    <h2 id="distance">2. Abstände</h2>
+    <h3>Sicherheitsabstand zum Vordermann</h3>
+    <ul>
+      <li>Außerorts Faustregel: <span class="n">halber Tacho in Metern</span> (km/h ÷ 2 = Meter).</li>
+      <li>"Zwei-Sekunden-Regel": fester Punkt — du solltest ihn frühestens 2 Sekunden nach dem Vordermann passieren.</li>
+      <li>Lkw &gt; 3,5 t bei &gt; 50 km/h auf der Autobahn: <span class="n">≥ 50 m</span>.</li>
+    </ul>
+    <h3>Richtwerte bei typischen Geschwindigkeiten</h3>
+    <table>
+      <tr><th>Geschwindigkeit</th><th>Halber Tacho</th></tr>
+      <tr><td>50 km/h</td><td class="num">25 m</td></tr>
+      <tr><td>80 km/h</td><td class="num">40 m</td></tr>
+      <tr><td>100 km/h</td><td class="num">50 m</td></tr>
+      <tr><td>130 km/h</td><td class="num">65 m</td></tr>
+    </table>
+    <h3>Abstände zu Verkehrseinrichtungen (Parken)</h3>
+    <ul>
+      <li>Vom Kreuzungsrand: kein Parken innerhalb <span class="n">5 m</span>.</li>
+      <li>Vor einem Zebrastreifen: kein Parken <span class="n">5 m</span> davor.</li>
+      <li>An einer Bushaltestelle (H): kein Parken <span class="n">15 m</span> davor und danach.</li>
+      <li>Vor einem Hydranten: <span class="n">1 m</span> Abstand beidseitig freihalten.</li>
+      <li>Andreaskreuz (Bahnübergang): kein Parken innerhalb <span class="n">5 m</span> innerorts, <span class="n">50 m</span> außerorts.</li>
+      <li>Enge und unübersichtliche Stellen, Kuppen, scharfe Kurven: kein Halten und kein Parken.</li>
+      <li>Abgesenkter Bordstein: kein Parken — das ist eine Einfahrt.</li>
+      <li>Auf Radwegen: kein Parken.</li>
+    </ul>
+    <h3>Beim Überholen</h3>
+    <ul>
+      <li>Seitenabstand zu Radfahrern oder Fußgängern: innerorts <span class="n">≥ 1,5 m</span>, außerorts <span class="n">≥ 2 m</span>.</li>
+      <li>Seitenabstand zu E-Scootern: <span class="n">≥ 1,5 m</span> innerorts, <span class="n">2 m</span> außerorts.</li>
+    </ul>
+
+    <h2 id="stopping">3. Anhalte- &amp; Reaktionsweg</h2>
+    <p>Anhalteweg = <em>Reaktionsweg</em> + <em>Bremsweg</em>.</p>
+    <h3>Faustformeln (km/h, normale Bremsung)</h3>
+    <ul>
+      <li>Reaktionsweg ≈ <span class="n">(Geschwindigkeit ÷ 10) × 3</span> m</li>
+      <li>Bremsweg ≈ <span class="n">(Geschwindigkeit ÷ 10)²</span> m</li>
+      <li>Gefahrenbremsung ≈ <span class="n">(Geschwindigkeit ÷ 10)² ÷ 2</span> m</li>
+    </ul>
+    <h3>Beispiele</h3>
+    <table>
+      <tr><th>Geschwindigkeit</th><th>Reaktion</th><th>Bremsweg</th><th>Gesamt</th></tr>
+      <tr><td>30 km/h</td><td class="num">9</td><td class="num">9</td><td class="num">18 m</td></tr>
+      <tr><td>50 km/h</td><td class="num">15</td><td class="num">25</td><td class="num">40 m</td></tr>
+      <tr><td>70 km/h</td><td class="num">21</td><td class="num">49</td><td class="num">70 m</td></tr>
+      <tr><td>100 km/h</td><td class="num">30</td><td class="num">100</td><td class="num">130 m</td></tr>
+    </table>
+    <h3>Was den Bremsweg verlängert</h3>
+    <ul>
+      <li>Nasse, vereiste oder verschneite Fahrbahn.</li>
+      <li>Anhänger ohne Bremse.</li>
+      <li>Abgenutzte Bremsen oder zu wenig Reifenluftdruck.</li>
+      <li>Bergab.</li>
+      <li>Hohes Gewicht/Beladung.</li>
+    </ul>
+
+    <h2 id="alcohol">4. Alkohol &amp; Drogen</h2>
+    <table>
+      <tr><th>Grenze</th><th>Wer / wann</th><th>Art</th></tr>
+      <tr><td class="num">0,0 ‰</td><td>Probezeit, alle unter 21 Jahren</td><td class="crit">Pflicht</td></tr>
+      <tr><td class="num">0,5 ‰</td><td>Allgemeine Promillegrenze</td><td>Ordnungswidrigkeit</td></tr>
+      <tr><td class="num">0,3 ‰</td><td>Bei auffälliger Fahrweise oder Unfall</td><td class="crit">Straftat</td></tr>
+      <tr><td class="num">1,1 ‰</td><td>Absolute Fahruntüchtigkeit</td><td class="crit">Straftat</td></tr>
+    </table>
+    <ul>
+      <li>Illegale Drogen: jeder Nachweis → Fahrverbot, Geldbuße, Punkte.</li>
+      <li>Medikamente: nur fahren, wenn der Arzt bestätigt, dass keine Beeinträchtigung vorliegt.</li>
+      <li>Alkoholabbau: rund <span class="n">0,1 ‰ pro Stunde</span> — Kaffee, frische Luft oder Essen helfen <em>nicht</em>.</li>
+      <li>Schon <span class="n">0,3 ‰</span> verkleinern das Sichtfeld, das räumliche Sehen und die Reaktionszeit messbar.</li>
+    </ul>
+
+    <h2 id="priority">5. Vorfahrt</h2>
+    <p>Rangfolge — höher schlägt niedriger:</p>
+    <ol>
+      <li>Anweisungen der Polizei</li>
+      <li>Lichtzeichen (Ampeln)</li>
+      <li>Verkehrszeichen</li>
+      <li>Markierungen</li>
+      <li>"Rechts vor links"</li>
+    </ol>
+    <h3>Wichtige Schilder</h3>
+    <ul>
+      <li><strong>Vorfahrtsstraße</strong> (gelbe Raute): du hast Vorfahrt, solange das Schild gilt.</li>
+      <li><strong>Vorfahrt gewähren</strong> (umgedrehtes rotes Dreieck): warten, fließend weiter wenn frei.</li>
+      <li><strong>Stop</strong> (rotes Achteck): voll anhalten an der Linie/Kante, dann gewähren.</li>
+      <li><strong>Kreisverkehr mit Vorfahrt-gewähren-Schild</strong>: Verkehr im Kreisel hat Vorfahrt.</li>
+      <li><strong>Kreisverkehr ohne Schild</strong> (selten): rechts vor links — der Einfahrende hat Vorfahrt.</li>
+    </ul>
+    <h3>Sonderfälle</h3>
+    <ul>
+      <li>Aus Grundstücken, Parkplätzen, Feldwegen, Fußgängerzonen: <em>immer</em> Vorfahrt gewähren.</li>
+      <li>Schienenfahrzeuge (z. B. Straßenbahn) haben grundsätzlich Vorfahrt.</li>
+      <li>Einsatzfahrzeuge mit Blaulicht + Martinshorn: Platz machen; auf der Autobahn <strong>Rettungsgasse</strong> zwischen ganz linkem und zweitem Fahrstreifen.</li>
+      <li>Bus mit Blinker fährt von der Haltestelle ab (innerorts): du musst warten.</li>
+    </ul>
+
+    <h2 id="lights">6. Beleuchtung</h2>
+    <ul>
+      <li><strong>Abblendlicht</strong> — bei Dämmerung, Nebel, starkem Regen oder Schneefall, im Tunnel.</li>
+      <li><strong>Fernlicht</strong> — außerorts, wenn kein Gegenverkehr und kein Vordermann; bei Nebel ausschalten (es blendet zurück).</li>
+      <li><strong>Tagfahrlicht</strong> — bei modernen Pkw automatisch; sonst Abblendlicht einschalten.</li>
+      <li><strong>Nebelscheinwerfer</strong> (vorne) — bei Nebel, Schneefall, starkem Regen.</li>
+      <li><strong>Nebelschlussleuchte</strong> — <em>nur</em> bei Sicht &lt; <span class="n">50 m</span>; max. <span class="n">50 km/h</span>.</li>
+      <li><strong>Warnblinker</strong> — bei Stillstand auf der Fahrbahn, Abschleppvorgang oder als Stauwarnung auf der Autobahn.</li>
+      <li><strong>Parklicht</strong> — nachts in unbeleuchteten Bereichen, wenn das Auto sonst nicht erkennbar ist.</li>
+    </ul>
+    <div class="callout warn">Nebelschlussleuchte bei Sicht &gt; 50 m → Bußgeld + blendet hinter dir.</div>
+
+    <h2 id="signs">7. Verkehrszeichen</h2>
+    <h3>Form-Logik</h3>
+    <ul>
+      <li><strong>Rotes Dreieck</strong> — Gefahrenzeichen.</li>
+      <li><strong>Roter Kreis</strong> — Verbot (Einfahrt verboten, Überholverbot, Tempolimit, …).</li>
+      <li><strong>Blauer Kreis</strong> — Gebot (vorgeschriebene Richtung, Fahrspur, Mindestgeschwindigkeit).</li>
+      <li><strong>Blaues Rechteck</strong> — Hinweis (Autobahn, Service, Route).</li>
+      <li><strong>Achteck</strong> — Stop.</li>
+      <li><strong>Schwarzer Schrägstrich</strong> auf Schild — Ende der Beschränkung.</li>
+    </ul>
+    <h3>Abstand zum Hinweisort</h3>
+    <ul>
+      <li>Gefahrenzeichen stehen außerorts ca. <span class="n">150–250 m</span> vor der Gefahr, innerorts <span class="n">≤ 50 m</span>.</li>
+      <li>Mehrere übereinander: oberstes Schild bezieht sich auf die nächste Gefahr.</li>
+    </ul>
+
+    <h2 id="parking">8. Halten &amp; Parken</h2>
+    <p>"Halten" ist bis zu 3 Minuten (oder zum Be-/Entladen oder Ein-/Aussteigen). "Parken" ist alles länger.</p>
+    <h3>Wo Halten verboten ist</h3>
+    <ul>
+      <li>Scharfe Kurven, Kuppen, enge Stellen.</li>
+      <li>Auf Vorfahrtsstraßen außerorts.</li>
+      <li>Auf Bahnübergängen.</li>
+      <li>Wo durch Schild verboten (rotes X).</li>
+      <li>Auf Autobahnen und Kraftfahrstraßen (außer Standstreifen im Notfall).</li>
+      <li>Auf Bus- oder Radspuren.</li>
+    </ul>
+    <h3>Wo Parken verboten ist (zusätzlich)</h3>
+    <ul>
+      <li>Innerhalb <span class="n">5 m</span> einer Kreuzung oder vor einem Zebrastreifen.</li>
+      <li>Innerhalb <span class="n">15 m</span> vor und nach einer Bushaltestelle.</li>
+      <li>Vor abgesenkten Bordsteinen.</li>
+      <li>Auf Taxiplätzen oder reservierten Plätzen.</li>
+      <li>Wo ein Parkverbotsschild gilt.</li>
+      <li>"Eingeschränktes Halteverbot" (Schild): max. 3 Minuten.</li>
+    </ul>
+    <h3>Parken am Hang</h3>
+    <ul>
+      <li>Bergauf, Bordstein vorhanden: Räder <strong>vom Bordstein weg</strong> drehen.</li>
+      <li>Bergab: Räder <strong>zum Bordstein hin</strong> drehen.</li>
+      <li>Immer Handbremse fest anziehen, 1. Gang (Schaltung) oder P (Automatik).</li>
+    </ul>
+
+    <h2 id="probation">9. Probezeit</h2>
+    <ul>
+      <li>Dauer <span class="n">2 Jahre</span> ab Erteilung der ersten Fahrerlaubnis.</li>
+      <li>Promillegrenze in der Probezeit: <span class="n">0,0 ‰</span> (auch alle unter 21, unabhängig von Probezeit).</li>
+      <li><strong>A-Verstoß</strong> (schwer — z. B. Rotlicht, Alkohol, Unfallflucht, Tempo &gt; 21 km/h): + 2 Jahre Probezeit + Aufbauseminar.</li>
+      <li><strong>B-Verstoß</strong> (leichter — z. B. kleinere Tempoverstöße, Mängel): zwei B-Verstöße = ein A-Verstoß.</li>
+      <li>Wiederholungstaten können zur verkehrspsychologischen Beratung führen.</li>
+    </ul>
+
+    <h2 id="tires">10. Reifen &amp; Winter</h2>
+    <ul>
+      <li>Mindestprofiltiefe: <span class="n">1,6 mm</span>. Empfohlen: Winter <span class="n">≥ 4 mm</span>, Sommer <span class="n">≥ 3 mm</span>.</li>
+      <li>Winterreifen (M+S, Alpine-Symbol) sind <strong>situativ Pflicht</strong> — bei Schnee, Matsch, Eis, Reifglätte.</li>
+      <li>Auf einer Achse keine unterschiedlichen Reifen.</li>
+      <li>Auf einer Achse möglichst gleiche Bauart, Marke und Profil.</li>
+      <li>Schneeketten: nur wo das Schild es vorschreibt.</li>
+      <li>Reifendruck: kalt prüfen, gemäß Typenschild; zu wenig erhöht Verbrauch und Bremsweg.</li>
+    </ul>
+
+    <h2 id="trailer">11. Anhänger</h2>
+    <ul>
+      <li>Reine Klasse B: Anhänger bis <span class="n">750 kg</span> immer; schwerere nur, wenn Gespann <span class="n">≤ 3 500 kg</span>.</li>
+      <li>Klasse B96: Gespann bis <span class="n">4 250 kg</span> (Schulung, keine Prüfung).</li>
+      <li>Klasse BE: schwere Anhänger, eigene Prüfung.</li>
+      <li>Geschwindigkeit mit Anhänger: <span class="n">80 km/h</span> außerorts; <span class="n">100 km/h</span> mit zugelassener 100-km/h-Plakette.</li>
+      <li>Anhänger braucht Beleuchtung, Bremsen (über 750 kg), Kotflügel, Kennzeichen.</li>
+      <li>Stützlast einhalten — zu wenig macht instabil, zu viel überlastet die Kupplung.</li>
+    </ul>
+
+    <h2 id="equipment">12. Dokumente &amp; Ausrüstung</h2>
+    <h3>Immer mitführen</h3>
+    <ul>
+      <li>Führerschein (Gültigkeit <span class="n">15 Jahre</span> für neue Klasse B ab 2013, Foto bei Verlängerung neu).</li>
+      <li>Zulassungsbescheinigung Teil I (früher Fahrzeugschein). Teil II bleibt zu Hause.</li>
+      <li>Versicherung: elektronisch über Kennzeichen.</li>
+    </ul>
+    <h3>Im Auto vorgeschrieben</h3>
+    <ul>
+      <li>Warndreieck — auf Autobahn <span class="n">100 m</span>, außerorts <span class="n">50 m</span>, innerorts <span class="n">50 m</span> aufstellen.</li>
+      <li>Verbandkasten — DIN-konform, Verfallsdatum prüfen.</li>
+      <li>Warnweste — beim Verlassen des Fahrzeugs auf der Fahrbahn anziehen.</li>
+    </ul>
+
+    <h2 id="points">13. Punkte (Flensburg)</h2>
+    <ul>
+      <li>Bereich: <span class="n">1–3 Punkte</span> pro Verstoß.</li>
+      <li><span class="n">8 Punkte</span> ⇒ Führerschein weg.</li>
+      <li>Tilgung: 1 Punkt 2,5 Jahre; 2 Punkte 5 Jahre; 3 Punkte 10 Jahre.</li>
+      <li>Freiwilliges <em>Fahreignungsseminar</em>: bei 1–5 Punkten 1 Punkt weniger (max. alle 5 Jahre).</li>
+      <li>Stufen: 1–3 Vormerkung, 4–5 Ermahnung, 6–7 Verwarnung, 8 Entzug.</li>
+    </ul>
+
+    <h2 id="defensive">14. Defensives Fahren</h2>
+    <ul>
+      <li>Defensiv heißt: nicht auf Vorfahrt bestehen; Fehler anderer einkalkulieren; früh bremsen; Platz lassen.</li>
+      <li>Häufige Auffahrunfall-Ursachen: zu dichtes Auffahren, plötzliches Bremsen, Ablenkung (Handy, Essen, Müdigkeit).</li>
+      <li>Vorausschau: möglichst weit — idealerweise 12 Sekunden Strecke.</li>
+      <li>Spiegel-Rhythmus: alle <span class="n">8–10 s</span>; toter Winkel vor jedem Spurwechsel.</li>
+      <li>Kinder und Senioren: jederzeit mit dem Schritt auf die Fahrbahn rechnen.</li>
+      <li>Radfahrer: können Schlaglöchern oder Türen ausweichen.</li>
+      <li>Müde: anhalten, <span class="n">15–20 min</span> schlafen; Kaffee überbrückt nur kurz.</li>
+    </ul>
+
+    <h2 id="environment">15. Umwelt</h2>
+    <ul>
+      <li>Sofort nach dem Start losfahren — moderne Motoren wärmen sich unter geringer Last besser auf als im Leerlauf.</li>
+      <li>Motor abstellen ab ca. <span class="n">~20 s</span> Stillstand (z. B. Bahnübergang, lange Rote).</li>
+      <li>Reifendruck korrekt halten — zu wenig kostet Sprit und Reifen.</li>
+      <li>Nicht genutzte Dachträger/-boxen abnehmen — viel Luftwiderstand.</li>
+      <li>Vorausschauend fahren — gleichmäßig statt bremsen-und-wieder-Gas.</li>
+      <li>Höchsten Gang nehmen, der noch entspannt läuft (Schaltung).</li>
+    </ul>
+
+    <h2 id="special">16. Besondere Situationen</h2>
+    <h3>Autobahn</h3>
+    <ul>
+      <li>Stockender Verkehr / Stauende: bei schneller Annäherung Warnblinker; sofort Rettungsgasse bilden.</li>
+      <li>Autobahn-Ende / Panne: Warnblinker, möglichst zur Ausfahrt oder auf Standstreifen, Warndreieck bei <span class="n">100 m</span>.</li>
+      <li>Standstreifen ist nur für Notfälle, nicht zum Halten oder Schlafen.</li>
+    </ul>
+    <h3>Tunnel</h3>
+    <ul>
+      <li>Abblendlicht ein, Sonnenbrille ab, Abstand halten.</li>
+      <li>Verkehrsfunk hören; Lichtsignalen über der Spur folgen.</li>
+      <li>Panne: in eine Notbucht, Warnblinker, Schlüssel stecken lassen, zum nächsten Notruftelefon.</li>
+    </ul>
+    <h3>Straßenbahn</h3>
+    <ul>
+      <li>Wenn möglich rechts überholen.</li>
+      <li>Steht die Bahn an einer Insel-Haltestelle und steigen Fahrgäste aus/ein, darf man nur in Schrittgeschwindigkeit und gefahrlos vorbei.</li>
+      <li>Schienenfahrzeuge haben grundsätzlich Vorfahrt — auch vor "rechts vor links".</li>
+    </ul>
+    <h3>Zebrastreifen</h3>
+    <ul>
+      <li>Fußgänger haben absoluten Vorrang.</li>
+      <li>Mit mäßiger Geschwindigkeit annähern und bremsbereit sein.</li>
+      <li>Auf oder kurz vor Zebrastreifen kein Überholen.</li>
+    </ul>
+    <h3>Schul- und Wohngebiete</h3>
+    <ul>
+      <li>Kinder unberechenbar — höchstens 30 km/h oder wie ausgeschildert.</li>
+      <li>Verkehrsberuhigte Bereiche: Schrittgeschwindigkeit, Kinder dürfen die ganze Straße nutzen.</li>
+    </ul>
+    <h3>Baustellen</h3>
+    <ul>
+      <li>Gelbe Markierungen schlagen weiße.</li>
+      <li>Spuren oft enger — Außenspiegel nur im Stand einklappen, nicht während der Fahrt.</li>
+      <li>Reduzierte Geschwindigkeiten verbindlich.</li>
+    </ul>
+  </div>
+
+  </main>
+
+  <button class="fab" id="topFab" title="Top">↑</button>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const STATE_KEY = 'dt_state_v1';
+
+  function getLang() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      if (s.lang === 'en' || s.lang === 'de') return s.lang;
+    } catch {}
+    const u = new URLSearchParams(location.search).get('lang');
+    if (u === 'en' || u === 'de') return u;
+    return 'en';
+  }
+  function setLang(l) {
+    document.body.dataset.lang = l;
+    document.documentElement.lang = l;
+    $('langBtn').textContent = l.toUpperCase();
+    try {
+      const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      cur.lang = l;
+      localStorage.setItem(STATE_KEY, JSON.stringify(cur));
+    } catch {}
+  }
+
+  setLang(getLang());
+  $('langBtn').onclick = () => setLang(document.body.dataset.lang === 'en' ? 'de' : 'en');
+
+  $('topFab').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 600) $('topFab').classList.add('show');
+    else $('topFab').classList.remove('show');
+  }, { passive: true });
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>

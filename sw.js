@@ -1,9 +1,10 @@
-const CACHE = 'dt-v12';
+const CACHE = 'dt-v13';
 const ASSETS = [
   './',
   './index.html',
   './cheatsheet.html',
   './feed.html',
+  './rules.html',
   './app-shared.js',
   './questions.json',
   './questions_de.json',
