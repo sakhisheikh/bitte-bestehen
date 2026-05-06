@@ -41,12 +41,29 @@ window.DT = (() => {
     return m ? +m[1] : 0;
   }
 
+  // Detects "fact lookup" questions — pure memorization, no situational logic.
+  // Matches if the question or any correct answer mentions distance, speed,
+  // weight, axle load, alcohol limits, periods, validity, etc., or if the
+  // answer is primarily numeric.
+  const FACT_KW_RE = /\b(distance|stopping distance|safety distance|speed|weight|axle|load|tonn|gross weight|maxim|minim|permissible|how many|how much|how long|how far|how old|how high|how wide|valid|limit|allow|alcohol|blood alcohol|promill|tyre|tire|tread|profile|tachograph|rest period|driving period|hours|minutes|seconds|km\/h|kilometer|metre|meter|fine|points in)\b|\b(abstand|entfernung|geschwindigkeit|gewicht|achse|achslast|nutzlast|tonnen|höchst|mindest|zulässig|gesamtgewicht|stützlast|wie viel|wie lang|wie weit|wie hoch|wie alt|wie breit|gültig|grenz|alkohol|promille|reifen|profiltiefe|fahrtenschreiber|ruhezeit|lenkzeit|kilometer|stunde|minute|sekund|punkte in)\b/i;
+  const NUM_ANS_RE = /^\s*\d|\d+\s*(m|km|kg|t|km\/h|h|min|sec|%|‰|°|punkt|point|jahr|year|monat|month|euro|stund|sekund)/i;
+
+  function isFactQuestion(q) {
+    if (FACT_KW_RE.test(q.question_text || '')) return true;
+    for (const c of q.correct_answers || []) {
+      const t = (c.text || c.letter || '').trim();
+      if (NUM_ANS_RE.test(t)) return true;
+    }
+    return false;
+  }
+
   // Klasse presets. Heuristic — upstream dataset isn't tagged with class.
   // Theme 1.x = Grundstoff (basics, all classes). 2.6/2.7/2.8 = LKW-heavy.
   const KLASSE = {
     all:        { en: 'All themes',                       de: 'Alle Themen',                 test: () => true },
     grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',          test: q => themePrefix(q).startsWith('1.') },
     b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',              test: q => { const p = themePrefix(q); return p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.'].includes(p); } },
+    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => { const p = themePrefix(q); const inB = p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.'].includes(p); return inB && isFactQuestion(q); } },
     lkw:        { en: 'LKW topics (Klasse C/CE)',         de: 'LKW-Stoff (Klasse C/CE)',     test: q => ['2.6.','2.7.','2.8.'].includes(themePrefix(q)) }
   };
 

@@ -309,7 +309,7 @@
   function buildChips() {
     const total = DT.totalCount();
     const favCount = DT.favoriteCount();
-    const klasses = ['grundstoff','b','lkw'];
+    const klasses = ['grundstoff','b','b_facts','lkw'];
     // English theme names from structural data — stable for filter key, but display localized
     const themesEN = Array.from(new Set(DT.all().map(q => q.theme_name)));
     const themeLabel = (enName) => {
