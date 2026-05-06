@@ -193,7 +193,13 @@
 
   .star-btn { background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 0 2px; line-height: 1; }
   .star-btn.on { color: #fbbf24; }
-  .source-link { color: var(--muted); text-decoration: none; font-size: 11px; margin-left: 4px; }
+  .source-link {
+    color: var(--accent); text-decoration: none; font-size: 13px;
+    padding: 5px 9px; border-radius: 6px;
+    background: rgba(96, 165, 250, 0.10);
+    flex-shrink: 0; line-height: 1;
+    -webkit-tap-highlight-color: rgba(96,165,250,0.25);
+  }
   .fragment-hint {
     margin: 6px 0 10px;
     padding: 7px 10px;
@@ -355,6 +361,17 @@
     });
   }
 
+  // Delegate source-link clicks: window.open is needed for iOS PWA standalone
+  // where bare <a target="_blank"> sometimes silently does nothing.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.source-link[data-source]');
+    if (!a) return;
+    e.preventDefault();
+    const u = a.getAttribute('href');
+    const w = window.open(u, '_blank', 'noopener,noreferrer');
+    if (!w) location.href = u;
+  });
+
   function isNaturalOrder() {
     // Natural means first 30 IDs are monotonically increasing
     for (let i = 1; i < Math.min(order.length, 30); i++) {
@@ -408,12 +425,13 @@
     ` : '';
 
     const fav = DT.isFavorite(q.question_id);
-    const sourceLink = q.url ? `<a class="source-link" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
+    const sourceLink = q.url ? `<a class="source-link" data-source="1" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
 
     return `<article class="card" data-idx="${idx}" data-qid="${escAttr(q.question_id)}">
       <div class="qmeta" style="display:flex; gap:6px; align-items:center;">
         <button class="star-btn ${fav ? 'on' : ''}" data-fav-qid="${escAttr(q.question_id)}">${fav ? '★' : '☆'}</button>
-        <span class="id" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;">${esc(q.question_id)} · ${esc(q.theme_name)} ${sourceLink}</span>
+        <span class="id" style="flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${esc(q.question_id)} · ${esc(q.theme_name)}</span>
+        ${sourceLink}
         <span class="points ${ptsCls}">${esc(q.points)}</span>
       </div>
       <div class="qtext">${esc(q.question_text)}</div>

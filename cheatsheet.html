@@ -142,7 +142,12 @@
     flex-shrink: 0;
   }
   .q .star-btn.on { color: #fbbf24; }
-  .q .source-link { color: var(--muted); text-decoration: none; font-size: 11px; margin-left: 4px; }
+  .q .source-link {
+    color: var(--accent); text-decoration: none; font-size: 12px;
+    padding: 3px 7px; border-radius: 5px; margin-left: 6px;
+    background: rgba(96,165,250,0.12); display: inline-block;
+    -webkit-tap-highlight-color: rgba(96,165,250,0.25);
+  }
   .q .a-free { color: var(--green); font-size: 14px; font-weight: 700; }
 
   .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
@@ -434,6 +439,17 @@
     });
   }
 
+  // Delegate source-link clicks: needed for iOS PWA standalone where bare
+  // <a target="_blank"> sometimes silently does nothing.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.source-link[data-source]');
+    if (!a) return;
+    e.preventDefault();
+    const u = a.getAttribute('href');
+    const w = window.open(u, '_blank', 'noopener,noreferrer');
+    if (!w) location.href = u;
+  });
+
   function qRow(q) {
     const pts = (q.points || '').match(/\d/);
     const ptsN = pts ? pts[0] : '';
@@ -466,7 +482,7 @@
     }
 
     const fav = DT.isFavorite(q.question_id);
-    const sourceLink = q.url ? `<a class="source-link" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
+    const sourceLink = q.url ? `<a class="source-link" data-source="1" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
 
     return `<div class="q">
       <div class="pts ${ptsCls}">${ptsN}</div>
