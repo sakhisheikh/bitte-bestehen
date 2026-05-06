@@ -190,6 +190,27 @@
     color: var(--text); font-size: 15px; margin-bottom: 6px; cursor: pointer; }
   .sheet button.active { background: var(--accent); color: #0a0a0a; font-weight: 700; }
   .sheet button.danger { color: var(--red); }
+
+  .star-btn { background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 0 2px; line-height: 1; }
+  .star-btn.on { color: #fbbf24; }
+  .source-link { color: var(--muted); text-decoration: none; font-size: 11px; margin-left: 4px; }
+  .fragment-hint {
+    margin: 6px 0 10px;
+    padding: 7px 10px;
+    background: rgba(245,158,11,0.10);
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    font-size: 12px; color: #d4d4d4; line-height: 1.4;
+  }
+  .free-answer {
+    padding: 14px;
+    background: var(--green-bg);
+    border: 2px solid var(--green-border);
+    border-radius: 10px;
+    color: var(--green);
+    font-size: 19px; font-weight: 700;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -225,6 +246,7 @@
 
   let order = [];
   let p5Only = false;
+  let favOnly = false;
   let klasseKey = 'all';
   let lang = 'en';
   let mediaIO = null;
@@ -236,7 +258,7 @@
 
   function saveState() {
     const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
-    cur.p5Only = p5Only; cur.klasseKey = klasseKey; cur.lang = lang;
+    cur.p5Only = p5Only; cur.favOnly = favOnly; cur.klasseKey = klasseKey; cur.lang = lang;
     localStorage.setItem(STATE_KEY, JSON.stringify(cur));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
@@ -245,6 +267,7 @@
       const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
       const o = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
       if (typeof s.p5Only === 'boolean') p5Only = s.p5Only;
+      if (typeof s.favOnly === 'boolean') favOnly = s.favOnly;
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
       if (typeof s.lang === 'string') lang = s.lang;
       if (Array.isArray(o)) order = o;
@@ -256,6 +279,10 @@
   function rebuildOrder() {
     let pool = DT.poolIndices(klasseKey);
     if (p5Only) pool = pool.filter(i => DT.pointsNum(DT.structural(i)) === 5);
+    if (favOnly) {
+      const favs = new Set(DT.favoriteIds());
+      pool = pool.filter(i => favs.has(DT.structural(i).question_id));
+    }
     order = pool;
     saveState();
   }
@@ -284,6 +311,7 @@
     const labels = [];
     if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
     if (p5Only) labels.push(T('5-pt', '5-Pkt'));
+    if (favOnly) labels.push('★');
     $('filterLabel').textContent = labels.length ? '· ' + labels.join(' · ') : '';
 
     const naturalOrder = isNaturalOrder();
@@ -309,9 +337,22 @@
 
     setupLazyMedia();
     setupCommentToggles();
+    setupStarButtons();
     setupPositionTracker();
     restoreScrollPosition();
     updateCounter();
+  }
+
+  function setupStarButtons() {
+    document.querySelectorAll('.star-btn[data-fav-qid]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const qid = btn.dataset.favQid;
+        const nowFav = DT.toggleFavorite(qid);
+        btn.textContent = nowFav ? '★' : '☆';
+        btn.classList.toggle('on', nowFav);
+      };
+    });
   }
 
   function isNaturalOrder() {
@@ -337,27 +378,48 @@
       media = `<div class="media"><video data-src="${escAttr(q.video_urls[0])}" controls playsinline preload="none"></video></div>`;
     }
 
-    const opts = (q.options || []).map(o => {
-      const correct = correctSet.has(o.letter);
-      return `<div class="option ${correct ? 'correct' : ''}">
-        <span class="letter">${esc(o.letter)}</span>
-        <span class="text">${esc(o.text)}</span>
-      </div>`;
-    }).join('');
+    const hasOptions = q.options && q.options.length > 0;
+    let answerBlock;
+    if (!hasOptions && q.correct_answers && q.correct_answers.length) {
+      const ans = q.correct_answers.map(c => esc(c.text || c.letter)).join(' / ');
+      answerBlock = `<div class="free-answer">${T('Answer', 'Antwort')}: ${ans}</div>`;
+    } else {
+      const opts = (q.options || []).map(o => {
+        const correct = correctSet.has(o.letter);
+        return `<div class="option ${correct ? 'correct' : ''}">
+          <span class="letter">${esc(o.letter)}</span>
+          <span class="text">${esc(o.text)}</span>
+        </div>`;
+      }).join('');
+      answerBlock = `<div class="options">${opts}</div>`;
+    }
+
+    const looksFragmented = hasOptions && q.options.every(o => {
+      const t = (o.text || '').trim();
+      return t.startsWith('-') ||
+             /^(if|to|so as|because|in order|when|by)\b/i.test(t) ||
+             /^(wenn|um|da|weil|durch|indem|beim|bevor|sobald)\b/i.test(t);
+    });
+    const fragmentHint = looksFragmented ? `<div class="fragment-hint">${T('Sentence-fragment options — see source ↗', 'Satzteil-Optionen — siehe Quelle ↗')}</div>` : '';
 
     const commentBlock = q.comment ? `
       <div class="comment-toggle" data-id="${escAttr(q.question_id)}">${T('Show explanation', 'Erklärung anzeigen')}</div>
       <div class="comment" data-id="${escAttr(q.question_id)}">${esc(q.comment)}</div>
     ` : '';
 
+    const fav = DT.isFavorite(q.question_id);
+    const sourceLink = q.url ? `<a class="source-link" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
+
     return `<article class="card" data-idx="${idx}" data-qid="${escAttr(q.question_id)}">
-      <div class="qmeta">
-        <span class="id">${esc(q.question_id)} · ${esc(q.theme_name)}</span>
+      <div class="qmeta" style="display:flex; gap:6px; align-items:center;">
+        <button class="star-btn ${fav ? 'on' : ''}" data-fav-qid="${escAttr(q.question_id)}">${fav ? '★' : '☆'}</button>
+        <span class="id" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;">${esc(q.question_id)} · ${esc(q.theme_name)} ${sourceLink}</span>
         <span class="points ${ptsCls}">${esc(q.points)}</span>
       </div>
       <div class="qtext">${esc(q.question_text)}</div>
       ${media}
-      <div class="options">${opts}</div>
+      ${fragmentHint}
+      ${answerBlock}
       ${commentBlock}
     </article>`;
   }
@@ -458,8 +520,12 @@
 
   function openFilterSheet() {
     const klasseKeys = ['all','grundstoff','b','lkw'];
+    const favCount = DT.favoriteCount();
     const html = `
-      <h3>${T('Klasse', 'Klasse')}</h3>
+      <h3>${T('Favorites', 'Favoriten')}</h3>
+      <button class="${!favOnly ? 'active' : ''}" data-action="fav" data-v="0">${T('All questions', 'Alle Fragen')}</button>
+      <button class="${favOnly ? 'active' : ''}" data-action="fav" data-v="1" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ ${T('Favorites only', 'Nur Favoriten')} (${favCount})</button>
+      <h3 style="margin-top:14px;">${T('Klasse', 'Klasse')}</h3>
       ${klasseKeys.map(k => `<button class="${klasseKey === k ? 'active' : ''}" data-action="klasse" data-v="${k}">${esc(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`).join('')}
       <h3 style="margin-top:14px;">${T('Difficulty', 'Schwierigkeit')}</h3>
       <button class="${!p5Only ? 'active' : ''}" data-action="p5" data-v="0">${T('All point values', 'Alle Punktwerte')}</button>
@@ -485,6 +551,7 @@
         }
         if (a === 'klasse') { klasseKey = v; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
         else if (a === 'p5') { p5Only = v === '1'; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
+        else if (a === 'fav') { favOnly = v === '1'; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
         else if (a === 'lang') { lang = v; }
         saveState();
         render();

@@ -136,6 +136,14 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; font-weight: 700;
   }
+  .q .star-btn {
+    background: transparent; border: none; color: var(--muted);
+    font-size: 16px; cursor: pointer; padding: 0; line-height: 1;
+    flex-shrink: 0;
+  }
+  .q .star-btn.on { color: #fbbf24; }
+  .q .source-link { color: var(--muted); text-decoration: none; font-size: 11px; margin-left: 4px; }
+  .q .a-free { color: var(--green); font-size: 14px; font-weight: 700; }
 
   .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
 
@@ -300,6 +308,7 @@
 
   function buildChips() {
     const total = DT.totalCount();
+    const favCount = DT.favoriteCount();
     const klasses = ['grundstoff','b','lkw'];
     // English theme names from structural data — stable for filter key, but display localized
     const themesEN = Array.from(new Set(DT.all().map(q => q.theme_name)));
@@ -320,6 +329,7 @@
 
     const chips = [
       `<button class="chip ${active==='all'?'active':''}" data-t="all">${T('All','Alle')} (${total})</button>`,
+      `<button class="chip ${active==='fav'?'active':''}" data-t="fav" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ (${favCount})</button>`,
       `<button class="chip ${active==='p5'?'active':''}" data-t="p5">${T('5-pt only','Nur 5-Pkt')} (${p5Count})</button>`,
       ...klasses.map(k => `<button class="chip ${active==='klasse:'+k?'active':''}" data-t="klasse:${k}">${esc(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`),
       ...themesEN.map(t => `<button class="chip ${active==='theme:'+t?'active':''}" data-t="theme:${escAttr(t)}">${esc(themeLabel(t))}</button>`)
@@ -338,6 +348,9 @@
   function indices() {
     let pool;
     if (active === 'all') pool = Array.from({length: DT.totalCount()}, (_, i) => i);
+    else if (active === 'fav') {
+      pool = DT.favoriteIndices();
+    }
     else if (active === 'p5') {
       pool = [];
       for (let i = 0; i < DT.totalCount(); i++) {
@@ -403,6 +416,22 @@
     }
     $('main').innerHTML = html.join('');
     setupLazyMedia();
+    setupStarButtons();
+  }
+
+  function setupStarButtons() {
+    document.querySelectorAll('.star-btn[data-fav-qid]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const qid = btn.dataset.favQid;
+        const nowFav = DT.toggleFavorite(qid);
+        btn.textContent = nowFav ? '★' : '☆';
+        btn.classList.toggle('on', nowFav);
+        // Refresh the chip count
+        buildChips();
+        if (active === 'fav') render();
+      };
+    });
   }
 
   function qRow(q) {
@@ -410,17 +439,23 @@
     const ptsN = pts ? pts[0] : '';
     const ptsCls = ptsN === '5' ? 'p5' : (ptsN === '4' ? 'p4' : '');
     const correct = q.correct_answers || [];
-    const totalLen = correct.reduce((n, a) => n + (a.text || '').length, 0);
-    const inline = correct.length === 1 && totalLen <= 60;
+    const hasOptions = q.options && q.options.length > 0;
 
     let answersHtml;
-    if (inline) {
-      answersHtml = `<div class="a-inline">→ ${esc(correct[0].text)}</div>`;
-    } else if (correct.length && totalLen <= 90 && correct.every(a => (a.text||'').length < 50)) {
-      // short list: inline separated
-      answersHtml = `<div class="a-inline">→ ${correct.map(a => esc(a.text)).join(' · ')}</div>`;
+    if (!hasOptions && correct.length) {
+      // free-text answer (e.g. "60" for max speed)
+      const ans = correct.map(c => esc(c.text || c.letter)).join(' / ');
+      answersHtml = `<div class="a-free">→ ${ans}</div>`;
     } else {
-      answersHtml = `<ul class="a-list">${correct.map(a => `<li>${esc(a.text)}</li>`).join('')}</ul>`;
+      const totalLen = correct.reduce((n, a) => n + (a.text || '').length, 0);
+      const inline = correct.length === 1 && totalLen <= 60;
+      if (inline) {
+        answersHtml = `<div class="a-inline">→ ${esc(correct[0].text)}</div>`;
+      } else if (correct.length && totalLen <= 90 && correct.every(a => (a.text||'').length < 50)) {
+        answersHtml = `<div class="a-inline">→ ${correct.map(a => esc(a.text)).join(' · ')}</div>`;
+      } else {
+        answersHtml = `<ul class="a-list">${correct.map(a => `<li>${esc(a.text)}</li>`).join('')}</ul>`;
+      }
     }
 
     let mediaHtml = '';
@@ -430,14 +465,18 @@
       mediaHtml = `<div class="media-wrap"><div class="media"><video data-src="${escAttr(q.video_urls[0])}" muted playsinline preload="none" width="64" height="64"></video></div><span class="vbadge">▶</span></div>`;
     }
 
+    const fav = DT.isFavorite(q.question_id);
+    const sourceLink = q.url ? `<a class="source-link" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
+
     return `<div class="q">
       <div class="pts ${ptsCls}">${ptsN}</div>
       ${mediaHtml}
       <div class="body">
-        <div class="qid">${esc(q.question_id)}</div>
+        <div class="qid">${esc(q.question_id)} ${sourceLink}</div>
         <div class="qtext">${esc(q.question_text)}</div>
         ${answersHtml}
       </div>
+      <button class="star-btn ${fav ? 'on' : ''}" data-fav-qid="${escAttr(q.question_id)}">${fav ? '★' : '☆'}</button>
     </div>`;
   }
 
