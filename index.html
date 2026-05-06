@@ -312,22 +312,29 @@
     text-align: center;
   }
 
-  /* Search results sheet */
-  .search-input {
-    width: 100%; padding: 10px 12px;
+  /* Inline search bar — slides down below topbar to filter the main pool */
+  .searchbar {
+    display: none;
+    padding: 8px 14px 4px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    gap: 8px; align-items: center;
+    position: sticky; top: 56px; z-index: 9;
+  }
+  .searchbar.open { display: flex; }
+  .searchbar input {
+    flex: 1; padding: 8px 12px; border-radius: 8px;
     background: var(--card2); color: var(--text);
-    border: 1px solid var(--card2); border-radius: 10px;
-    font-size: 16px; -webkit-appearance: none; appearance: none;
+    border: 1px solid var(--card2); font-size: 15px;
+    -webkit-appearance: none; appearance: none;
   }
-  .search-result {
-    padding: 10px 12px; background: var(--card2);
-    border: none; border-radius: 10px;
-    color: var(--text); font-size: 14px; text-align: left;
-    margin-bottom: 6px; cursor: pointer; width: 100%;
-    display: flex; flex-direction: column; gap: 2px;
+  .searchbar input::placeholder { color: var(--muted); }
+  .searchbar .clear-btn {
+    background: var(--card); color: var(--text);
+    border: none; padding: 8px 12px; border-radius: 8px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    line-height: 1;
   }
-  .search-result .meta { font-size: 11px; color: var(--muted); font-family: ui-monospace, "SF Mono", monospace; }
-  .search-result .preview { font-size: 14px; color: var(--text); line-height: 1.3; }
 </style>
 </head>
 <body>
@@ -349,6 +356,11 @@
         <button class="toolbtn" id="filterBtn">Filter</button>
       </div>
     </div>
+  </div>
+
+  <div class="searchbar" id="searchbar">
+    <input id="searchInput" type="search" placeholder="Search…" autocomplete="off" />
+    <button class="clear-btn" id="searchClear" title="Clear">×</button>
   </div>
 
   <div class="stage" id="stage">
@@ -375,6 +387,7 @@
   let favOnly = false;      // favorites-only toggle
   let klasseKey = 'all';    // all | grundstoff | b | lkw
   let lang = 'en';          // en | de
+  let searchQuery = '';     // live search filter; empty = no search
   let commentExpanded = {}; // qid -> bool
 
   const $ = id => document.getElementById(id);
@@ -382,7 +395,7 @@
 
   /* ---------- persistence ---------- */
   function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, klasseKey, lang, commentExpanded }));
+    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, klasseKey, lang, searchQuery, commentExpanded }));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
   function loadState() {
@@ -394,6 +407,7 @@
       if (typeof s.favOnly === 'boolean') favOnly = s.favOnly;
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
       if (typeof s.lang === 'string') lang = s.lang;
+      if (typeof s.searchQuery === 'string') searchQuery = s.searchQuery;
       if (s.commentExpanded) commentExpanded = s.commentExpanded;
       if (Array.isArray(o)) order = o;
     } catch (e) {}
@@ -403,6 +417,21 @@
     if (urlLang === 'de' || urlLang === 'en') lang = urlLang;
   }
 
+  // Substring match across question id, question text (EN+DE), correct answers, options.
+  function matchesQuery(idx, q) {
+    if (!q) return true;
+    const en = DT.structural(idx);
+    const de = DT.getQ(idx, 'de');
+    const haystacks = [
+      en.question_id, en.question_text || '', de && de.question_text || '',
+      ...(en.correct_answers || []).map(c => c.text || c.letter || ''),
+      ...(de && de.correct_answers || []).map(c => c.text || c.letter || ''),
+      ...(en.options || []).map(o => o.text || ''),
+      ...(de && de.options || []).map(o => o.text || '')
+    ];
+    return haystacks.some(s => s && s.toLowerCase().includes(q));
+  }
+
   /* ---------- order / filter ---------- */
   function rebuildOrder() {
     let pool = DT.poolIndices(klasseKey);
@@ -410,6 +439,10 @@
     if (favOnly) {
       const favs = new Set(DT.favoriteIds());
       pool = pool.filter(i => favs.has(DT.structural(i).question_id));
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      pool = pool.filter(i => matchesQuery(i, q));
     }
     order = pool;
     pos = 0;
@@ -466,6 +499,7 @@
     if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
     if (p5Only) labels.push(T('5-pt only', 'nur 5-Punkte'));
     if (favOnly) labels.push(T('★ favorites', '★ Favoriten'));
+    if (searchQuery) labels.push(`"${searchQuery}"`);
     $('filterLabel').textContent = labels.length ? '· ' + labels.join(' · ') : '';
 
     let media = '';
@@ -649,42 +683,43 @@
     });
   }
 
-  function openSearchSheet() {
-    $('sheet').innerHTML = `
-      <h3>${T('Search', 'Suche')}</h3>
-      <input class="search-input" id="searchInput" placeholder="${T('id, question, answer…', 'ID, Frage, Antwort…')}" autofocus />
-      <div id="searchResults" style="margin-top:10px;"></div>
-      <button data-action="close" style="margin-top:10px; text-align:center;">${T('Close', 'Schließen')}</button>
-    `;
-    $('modal').classList.add('open');
-    const input = document.getElementById('searchInput');
-    const results = document.getElementById('searchResults');
-    let timer;
-    const run = () => {
-      const q = input.value.trim();
-      if (!q) { results.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px; font-size:13px;">${T('Type to search 2,400+ questions', 'Tippe zum Suchen in 2.400+ Fragen')}</div>`; return; }
-      const idxs = DT.search(q, { limit: 30 });
-      if (!idxs.length) { results.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px;">${T('No matches', 'Keine Treffer')}</div>`; return; }
-      results.innerHTML = idxs.map(i => {
-        const x = DT.getQ(i, lang);
-        const text = (x.question_text || '').slice(0, 110);
-        return `<button class="search-result" data-idx="${i}">
-          <span class="meta">${escapeHtml(x.question_id)} · ${escapeHtml(x.points)} · ${escapeHtml(x.theme_name)}</span>
-          <span class="preview">${escapeHtml(text)}${(x.question_text||'').length>110?'…':''}</span>
-        </button>`;
-      }).join('');
-      results.querySelectorAll('.search-result').forEach(b => {
-        b.onclick = () => {
-          const idx = +b.dataset.idx;
-          $('modal').classList.remove('open');
-          jumpToIndex(idx);
-        };
-      });
-    };
-    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 120); });
-    run();
-    setTimeout(() => input.focus(), 100);
-    $('sheet').querySelector('[data-action="close"]').onclick = () => $('modal').classList.remove('open');
+  // Toggle the inline search bar. Live filters the main pool as you type.
+  function toggleSearch() {
+    const bar = $('searchbar');
+    const input = $('searchInput');
+    const open = !bar.classList.contains('open');
+    if (open) {
+      bar.classList.add('open');
+      input.value = searchQuery;
+      input.placeholder = T('Search question, answer, ID…', 'Frage, Antwort, ID suchen…');
+      setTimeout(() => input.focus(), 50);
+    } else {
+      // closing without clearing: keep the active search filter applied
+      bar.classList.remove('open');
+      input.blur();
+    }
+  }
+
+  function clearSearch() {
+    $('searchInput').value = '';
+    if (searchQuery) {
+      searchQuery = '';
+      rebuildOrder();
+      render();
+    }
+    $('searchInput').focus();
+  }
+
+  let searchDebounce;
+  function onSearchInput(e) {
+    clearTimeout(searchDebounce);
+    const v = e.target.value.trim();
+    searchDebounce = setTimeout(() => {
+      if (v === searchQuery) return;
+      searchQuery = v;
+      rebuildOrder();
+      render();
+    }, 150);
   }
 
   /* ---------- gestures ---------- */
@@ -730,9 +765,17 @@
     $('prevBtn').onclick = prev;
     $('shuffleBtn').onclick = shuffle;
     $('filterBtn').onclick = openFilterSheet;
-    $('searchBtn').onclick = openSearchSheet;
+    $('searchBtn').onclick = toggleSearch;
+    $('searchInput').addEventListener('input', onSearchInput);
+    $('searchClear').onclick = clearSearch;
     $('langBtn').onclick = () => { lang = lang === 'en' ? 'de' : 'en'; saveState(); render(); };
     $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
+
+    // If a search query was persisted, show the search bar pre-filled
+    if (searchQuery) {
+      $('searchbar').classList.add('open');
+      $('searchInput').value = searchQuery;
+    }
 
     initGestures();
     render();
