@@ -312,6 +312,40 @@
     text-align: center;
   }
 
+  /* Test/practice mode — interactive options */
+  .option.selected {
+    background: rgba(96,165,250,0.15);
+    border-color: var(--accent);
+  }
+  .option.selected .letter { color: var(--accent); }
+  .option.wrong-pick {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.55);
+  }
+  .option.wrong-pick .letter { color: var(--red); }
+  .option.wrong-pick::after {
+    content: "✗"; margin-left: auto;
+    color: var(--red); font-weight: 800; font-size: 18px;
+    align-self: center;
+  }
+  .submit-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 14px;
+    background: var(--accent); color: #0a0a0a;
+    border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+  }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .submit-btn:active { opacity: 0.8; }
+  .result-banner {
+    margin-top: 10px; padding: 10px 14px;
+    border-radius: 10px; font-size: 14px; font-weight: 700;
+    text-align: center;
+  }
+  .result-banner.correct { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .result-banner.wrong   { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.55); }
+
   /* Inline search bar — slides down below topbar to filter the main pool */
   .searchbar {
     display: none;
@@ -388,14 +422,25 @@
   let klasseKey = 'all';    // all | grundstoff | b | lkw
   let lang = 'en';          // en | de
   let searchQuery = '';     // live search filter; empty = no search
+  let mode = 'memorize';    // 'memorize' | 'test'
   let commentExpanded = {}; // qid -> bool
+  let currentSelected = new Set(); // letters selected for the current unsubmitted test question
+
+  const PROGRESS_KEY = 'dt_progress_v1';
+  let progress = {};        // qid -> { result: 'correct'|'wrong', selected: [letters] }
+  function loadProgress() {
+    try { progress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}') || {}; } catch { progress = {}; }
+  }
+  function saveProgress() {
+    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch {}
+  }
 
   const $ = id => document.getElementById(id);
   const T = (en, de) => lang === 'de' ? de : en;
 
   /* ---------- persistence ---------- */
   function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, klasseKey, lang, searchQuery, commentExpanded }));
+    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, klasseKey, lang, searchQuery, mode, commentExpanded }));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
   function loadState() {
@@ -408,6 +453,7 @@
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
       if (typeof s.lang === 'string') lang = s.lang;
       if (typeof s.searchQuery === 'string') searchQuery = s.searchQuery;
+      if (s.mode === 'memorize' || s.mode === 'test') mode = s.mode;
       if (s.commentExpanded) commentExpanded = s.commentExpanded;
       if (Array.isArray(o)) order = o;
     } catch (e) {}
@@ -446,6 +492,7 @@
     }
     order = pool;
     pos = 0;
+    currentSelected = new Set();
     saveState();
   }
 
@@ -496,10 +543,23 @@
     $('counter').textContent = `${pos + 1} / ${order.length}`;
     $('progressFill').style.width = `${((pos + 1) / order.length) * 100}%`;
     const labels = [];
+    if (mode === 'test') labels.push(T('TEST', 'TEST'));
     if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
     if (p5Only) labels.push(T('5-pt only', 'nur 5-Punkte'));
     if (favOnly) labels.push(T('★ favorites', '★ Favoriten'));
     if (searchQuery) labels.push(`"${searchQuery}"`);
+
+    // Stats in test mode: right/wrong/unseen counts within current order
+    if (mode === 'test') {
+      let right = 0, wrong = 0;
+      for (const i of order) {
+        const qid = DT.structural(i).question_id;
+        const p = progress[qid];
+        if (p) { if (p.result === 'correct') right++; else wrong++; }
+      }
+      const unseen = order.length - right - wrong;
+      labels.push(`${right}✓ · ${wrong}✗ · ${unseen}…`);
+    }
     $('filterLabel').textContent = labels.length ? '· ' + labels.join(' · ') : '';
 
     let media = '';
@@ -511,11 +571,44 @@
 
     // Detect free-text question (no options, but a correct_answers entry with text in .letter).
     const hasOptions = q.options && q.options.length > 0;
+    const submitted = mode === 'test' && !!progress[q.question_id];
     let answerBlock;
     if (!hasOptions && q.correct_answers && q.correct_answers.length) {
       const ans = q.correct_answers.map(c => escapeHtml(c.text || c.letter)).join(' / ');
       answerBlock = `<div class="free-answer">${T('Answer', 'Antwort')}: ${ans}</div>`;
+    } else if (mode === 'test') {
+      // Test mode: options without pre-highlighting until submit/reveal
+      const userSet = submitted
+        ? new Set(progress[q.question_id].selected || [])
+        : currentSelected;
+      const opts = (q.options || []).map(o => {
+        const isCorrect = correctSet.has(o.letter);
+        const isSel = userSet.has(o.letter);
+        let cls = '';
+        if (submitted) {
+          if (isCorrect) cls = 'correct';            // always reveal correct ones
+          else if (isSel) cls = 'wrong-pick';        // user selected but it was wrong
+        } else if (isSel) {
+          cls = 'selected';
+        }
+        return `<div class="option ${cls}" data-letter="${escapeAttr(o.letter)}">
+          <span class="letter">${escapeHtml(o.letter)}</span>
+          <span class="text">${escapeHtml(o.text)}</span>
+        </div>`;
+      }).join('');
+
+      let footer = '';
+      if (submitted) {
+        const r = progress[q.question_id].result;
+        footer = `<div class="result-banner ${r}">${
+          r === 'correct' ? T('✓ Correct', '✓ Richtig') : T('✗ Wrong', '✗ Falsch')
+        }</div>`;
+      } else {
+        footer = `<button class="submit-btn" id="submitBtn"${currentSelected.size === 0 ? ' disabled' : ''}>${T('Submit', 'Bestätigen')}</button>`;
+      }
+      answerBlock = `<div class="options">${opts}</div>${footer}`;
     } else {
+      // Memorize mode: pre-highlight correct answers (default visual priming)
       const opts = (q.options || []).map(o => {
         const correct = correctSet.has(o.letter);
         return `<div class="option ${correct ? 'correct' : ''}">
@@ -595,6 +688,27 @@
       };
     }
 
+    // Test mode: option taps + submit
+    if (mode === 'test' && hasOptions && !submitted) {
+      const isMulti = (q.correct_answers || []).length > 1;
+      document.querySelectorAll('.option[data-letter]').forEach(el => {
+        el.addEventListener('click', () => {
+          const L = el.dataset.letter;
+          if (isMulti) {
+            if (currentSelected.has(L)) currentSelected.delete(L);
+            else currentSelected.add(L);
+          } else {
+            currentSelected.clear();
+            currentSelected.add(L);
+          }
+          // Light re-render of options + submit button
+          renderOptionsOnly(q, correctSet);
+        });
+      });
+      const submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) submitBtn.onclick = () => submitAnswer(q, correctSet);
+    }
+
     // Source link — fall back to window.open for iOS PWA standalone where
     // <a target="_blank"> sometimes silently does nothing.
     const srcLink = document.getElementById('sourceLink');
@@ -632,15 +746,76 @@
   }
   function escapeAttr(s) { return escapeHtml(s); }
 
-  function next() { if (pos < order.length - 1) { pos++; render(); } }
-  function prev() { if (pos > 0) { pos--; render(); } }
+  function next() {
+    if (pos < order.length - 1) {
+      pos++;
+      currentSelected = new Set();
+      render();
+    }
+  }
+  function prev() {
+    if (pos > 0) {
+      pos--;
+      currentSelected = new Set();
+      render();
+    }
+  }
+
+  // Lightweight re-render of just the option pills + submit button when the
+  // user taps to select. Avoids redrawing media etc.
+  function renderOptionsOnly(q, correctSet) {
+    const optsEl = document.querySelector('.stage .options');
+    if (!optsEl) return;
+    const html = (q.options || []).map(o => {
+      const isSel = currentSelected.has(o.letter);
+      const cls = isSel ? 'selected' : '';
+      return `<div class="option ${cls}" data-letter="${escapeAttr(o.letter)}">
+        <span class="letter">${escapeHtml(o.letter)}</span>
+        <span class="text">${escapeHtml(o.text)}</span>
+      </div>`;
+    }).join('');
+    optsEl.innerHTML = html;
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) submitBtn.disabled = currentSelected.size === 0;
+    // Re-attach option click handlers (since we replaced the DOM)
+    const isMulti = (q.correct_answers || []).length > 1;
+    optsEl.querySelectorAll('.option[data-letter]').forEach(el => {
+      el.addEventListener('click', () => {
+        const L = el.dataset.letter;
+        if (isMulti) {
+          if (currentSelected.has(L)) currentSelected.delete(L);
+          else currentSelected.add(L);
+        } else {
+          currentSelected.clear();
+          currentSelected.add(L);
+        }
+        renderOptionsOnly(q, correctSet);
+      });
+    });
+  }
+
+  function submitAnswer(q, correctSet) {
+    const selected = [...currentSelected];
+    const right = selected.length === correctSet.size && selected.every(l => correctSet.has(l));
+    progress[q.question_id] = {
+      result: right ? 'correct' : 'wrong',
+      selected
+    };
+    saveProgress();
+    currentSelected = new Set();
+    render(); // full re-render to show result-banner and reveal styling
+  }
 
   /* ---------- modal / filter sheet ---------- */
   function openFilterSheet() {
     const klasseKeys = ['all','grundstoff','b','b_facts','lkw'];
     const favCount = DT.favoriteCount();
+    const progressCount = Object.keys(progress).length;
     const html = `
-      <h3>${T('Favorites', 'Favoriten')}</h3>
+      <h3>${T('Mode', 'Modus')}</h3>
+      <button class="${mode === 'memorize' ? 'active' : ''}" data-action="mode" data-v="memorize">${T('Memorize (answers pre-highlighted)', 'Auswendiglernen (Antworten vorgehoben)')}</button>
+      <button class="${mode === 'test' ? 'active' : ''}" data-action="mode" data-v="test">${T('Test yourself (tap & submit)', 'Selbsttest (tippen & bestätigen)')}</button>
+      <h3 style="margin-top:14px;">${T('Favorites', 'Favoriten')}</h3>
       <button class="${!favOnly ? 'active' : ''}" data-action="fav" data-v="0">${T('All questions', 'Alle Fragen')}</button>
       <button class="${favOnly ? 'active' : ''}" data-action="fav" data-v="1" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ ${T('Favorites only', 'Nur Favoriten')} (${favCount})</button>
       <h3 style="margin-top:14px;">${T('Klasse', 'Klasse')}</h3>
@@ -652,7 +827,8 @@
       <button class="${lang === 'en' ? 'active' : ''}" data-action="lang" data-v="en">English</button>
       <button class="${lang === 'de' ? 'active' : ''}" data-action="lang" data-v="de">Deutsch</button>
       <h3 style="margin-top:14px;">${T('Progress', 'Fortschritt')}</h3>
-      <button class="danger" data-action="reset">${T('Reset progress', 'Fortschritt zurücksetzen')}</button>
+      <button class="danger" data-action="reset-test" ${progressCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>${T(`Clear test answers (${progressCount})`, `Test-Antworten löschen (${progressCount})`)}</button>
+      <button class="danger" data-action="reset">${T('Reset all progress', 'Alles zurücksetzen')}</button>
       <button data-action="close" style="margin-top:6px; text-align:center;">${T('Close', 'Schließen')}</button>
     `;
     $('sheet').innerHTML = html;
@@ -662,19 +838,33 @@
         const a = b.dataset.action, v = b.dataset.v;
         if (a === 'close') { $('modal').classList.remove('open'); return; }
         if (a === 'reset') {
-          if (confirm(T('Reset progress?', 'Fortschritt zurücksetzen?'))) {
+          if (confirm(T('Reset everything (filters, position, test answers, favorites)?', 'Alles zurücksetzen (Filter, Position, Testantworten, Favoriten)?'))) {
             localStorage.removeItem(STATE_KEY);
             localStorage.removeItem(ORDER_KEY);
-            klasseKey = 'all'; p5Only = false; favOnly = false;
+            localStorage.removeItem(PROGRESS_KEY);
+            klasseKey = 'all'; p5Only = false; favOnly = false; searchQuery = ''; mode = 'memorize';
+            progress = {};
+            currentSelected = new Set();
             rebuildOrder();
             render();
           }
           $('modal').classList.remove('open');
           return;
         }
-        if (a === 'klasse') { klasseKey = v; rebuildOrder(); }
-        else if (a === 'p5')  { p5Only = v === '1'; rebuildOrder(); }
-        else if (a === 'fav') { favOnly = v === '1'; rebuildOrder(); }
+        if (a === 'reset-test') {
+          if (confirm(T('Clear all test answers? Filters and favorites stay.', 'Testantworten löschen? Filter und Favoriten bleiben.'))) {
+            progress = {};
+            saveProgress();
+            currentSelected = new Set();
+            render();
+          }
+          $('modal').classList.remove('open');
+          return;
+        }
+        if (a === 'klasse') { klasseKey = v; currentSelected = new Set(); rebuildOrder(); }
+        else if (a === 'p5')  { p5Only = v === '1'; currentSelected = new Set(); rebuildOrder(); }
+        else if (a === 'fav') { favOnly = v === '1'; currentSelected = new Set(); rebuildOrder(); }
+        else if (a === 'mode'){ mode = v; currentSelected = new Set(); }
         else if (a === 'lang') { lang = v; }
         saveState();
         render();
@@ -757,7 +947,11 @@
     }
 
     loadState();
+    loadProgress();
     if (!order.length || order.length > DT.totalCount()) {
+      rebuildOrder();
+    } else if (searchQuery) {
+      // re-apply search filter on reload (in case dataset/IDs changed)
       rebuildOrder();
     }
 
