@@ -312,6 +312,51 @@
     text-align: center;
   }
 
+  /* Side drawer (replaces overcrowded topbar buttons) */
+  .drawer-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 80;
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 78%; max-width: 320px;
+    background: var(--card);
+    z-index: 81;
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+    overflow-y: auto;
+    padding: calc(12px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom));
+    border-right: 1px solid var(--line);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer h4 {
+    margin: 14px 0 6px; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .drawer h4:first-child { margin-top: 0; }
+  .drawer a, .drawer button {
+    display: flex; align-items: center;
+    gap: 10px; width: 100%;
+    padding: 12px 14px;
+    background: var(--card2); color: var(--text);
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600; text-decoration: none;
+    margin-bottom: 6px; cursor: pointer;
+    text-align: left;
+  }
+  .drawer a.current { background: var(--accent); color: #0a0a0a; }
+  .drawer .icon { font-size: 18px; min-width: 22px; text-align: center; }
+  .menu-btn {
+    background: var(--card); color: var(--text);
+    border: none; padding: 8px 12px; border-radius: 8px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    line-height: 1;
+  }
+
   /* Test/practice mode — interactive options */
   .option.selected {
     background: rgba(96,165,250,0.15);
@@ -375,22 +420,31 @@
   <div class="topbar">
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="topmeta">
-      <div class="left">
+      <div class="left" style="min-width:0; overflow:hidden;">
+        <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
         <span id="counter">0 / 0</span>
-        <span id="filterLabel"></span>
+        <span id="filterLabel" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
       </div>
-      <div style="display:flex; gap:6px;">
+      <div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="toolbtn" id="langBtn" title="Toggle language">EN</button>
-        <button class="toolbtn" id="searchBtn" title="Search">⌕</button>
-        <a class="toolbtn" href="rules.html" style="text-decoration:none;">Rules</a>
-        <a class="toolbtn" href="signs.html" style="text-decoration:none;">Signs</a>
-        <a class="toolbtn" href="feed.html" style="text-decoration:none;">Feed</a>
-        <a class="toolbtn" href="cheatsheet.html" style="text-decoration:none;">Sheet</a>
-        <button class="toolbtn" id="shuffleBtn">Shuffle</button>
         <button class="toolbtn" id="filterBtn">Filter</button>
       </div>
     </div>
   </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="drawer" aria-label="Menu">
+    <h4>Views</h4>
+    <a href="./" class="current"><span class="icon">📝</span> Quiz</a>
+    <a href="exam.html"><span class="icon">📋</span> Mock Exam</a>
+    <a href="feed.html"><span class="icon">📜</span> Feed</a>
+    <a href="cheatsheet.html"><span class="icon">📊</span> Cheatsheet</a>
+    <a href="rules.html"><span class="icon">📖</span> Rule Book</a>
+    <a href="signs.html"><span class="icon">🚸</span> Signs</a>
+    <h4>Quick actions</h4>
+    <button id="drawerSearchBtn"><span class="icon">⌕</span> Search</button>
+    <button id="drawerShuffleBtn"><span class="icon">🔀</span> Shuffle</button>
+  </aside>
 
   <div class="searchbar" id="searchbar">
     <input id="searchInput" type="search" placeholder="Search…" autocomplete="off" />
@@ -957,13 +1011,25 @@
 
     $('nextBtn').onclick = next;
     $('prevBtn').onclick = prev;
-    $('shuffleBtn').onclick = shuffle;
     $('filterBtn').onclick = openFilterSheet;
-    $('searchBtn').onclick = toggleSearch;
     $('searchInput').addEventListener('input', onSearchInput);
     $('searchClear').onclick = clearSearch;
     $('langBtn').onclick = () => { lang = lang === 'en' ? 'de' : 'en'; saveState(); render(); };
     $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
+
+    // Drawer (hamburger menu)
+    const openDrawer = () => {
+      $('drawer').classList.add('open');
+      $('drawerBackdrop').classList.add('open');
+    };
+    const closeDrawer = () => {
+      $('drawer').classList.remove('open');
+      $('drawerBackdrop').classList.remove('open');
+    };
+    $('menuBtn').onclick = openDrawer;
+    $('drawerBackdrop').onclick = closeDrawer;
+    $('drawerSearchBtn').onclick = () => { closeDrawer(); toggleSearch(); };
+    $('drawerShuffleBtn').onclick = () => { closeDrawer(); shuffle(); };
 
     // If a search query was persisted, show the search bar pre-filled
     if (searchQuery) {

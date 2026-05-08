@@ -1,4 +1,4 @@
-const CACHE = 'dt-v16';
+const CACHE = 'dt-v17';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   './feed.html',
   './rules.html',
   './signs.html',
+  './exam.html',
   './app-shared.js',
   './questions.json',
   './questions_de.json',

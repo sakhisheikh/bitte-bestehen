@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0a0a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+
+<title>Bitte Bestehen — Mock Exam</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+
+<script src="app-shared.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #161616;
+    --card2: #1f1f1f;
+    --line: #222;
+    --text: #f5f5f5;
+    --muted: #888;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.15);
+    --green-border: rgba(34,197,94,0.55);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.15);
+    --orange: #f59e0b;
+    --accent: #60a5fa;
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.45; overflow-x: hidden; }
+  body { padding-top: var(--safe-top); padding-bottom: var(--safe-bottom); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(10,10,10,0.92); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 14px;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .topbar a, .topbar button {
+    color: var(--accent); text-decoration: none; font-weight: 700;
+    background: transparent; border: none; font-size: 14px; cursor: pointer;
+    padding: 4px 6px;
+  }
+  .topbar .title { flex: 1; text-align: center; color: var(--text); font-weight: 700; font-size: 14px; }
+
+  main { max-width: 720px; margin: 0 auto; padding: 16px 14px 100px; }
+
+  /* Splash */
+  .splash {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px 18px;
+  }
+  .splash h2 { margin: 0 0 10px; font-size: 22px; }
+  .splash p { color: #d4d4d4; margin: 6px 0; font-size: 14px; line-height: 1.5; }
+  .splash ul { margin: 8px 0 16px; padding-left: 20px; color: #d4d4d4; font-size: 14px; }
+  .splash button.primary {
+    width: 100%; padding: 16px;
+    background: var(--accent); color: #0a0a0a;
+    border: none; border-radius: 12px;
+    font-size: 17px; font-weight: 800; cursor: pointer;
+  }
+  .splash button.primary:active { opacity: 0.85; }
+
+  /* Cards */
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; scroll-margin-top: 70px;
+  }
+  .card .qmeta {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 8px; font-size: 11px; color: var(--muted);
+  }
+  .card .qmeta .num {
+    background: var(--card2); color: var(--text);
+    padding: 2px 8px; border-radius: 6px;
+    font-weight: 800; font-size: 11px;
+  }
+  .card .qmeta .pts {
+    padding: 2px 7px; border-radius: 5px;
+    background: #2a2a2a; color: #ddd;
+    font-weight: 700; font-size: 10px;
+  }
+  .card .qmeta .pts.p5 { background: var(--red-bg); color: var(--red); }
+  .card .qmeta .pts.p4 { background: rgba(245,158,11,0.18); color: var(--orange); }
+  .card .qmeta .id { font-family: ui-monospace, "SF Mono", monospace; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .qmeta .source-link {
+    color: var(--accent); text-decoration: none; font-size: 13px;
+    padding: 4px 8px; border-radius: 6px;
+    background: rgba(96,165,250,0.10); flex-shrink: 0;
+  }
+  .card .qtext { font-size: 16px; font-weight: 600; line-height: 1.35; margin: 4px 0 10px; }
+  .card .media { margin: 0 0 10px; border-radius: 10px; overflow: hidden; background: #000; }
+  .card .media img, .card .media video { width: 100%; height: auto; display: block; max-height: 50vh; object-fit: contain; background: #000; }
+
+  .options { display: flex; flex-direction: column; gap: 6px; }
+  .option {
+    display: flex; gap: 8px;
+    padding: 10px 12px;
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    font-size: 14.5px; line-height: 1.35;
+    cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  .option .letter { font-weight: 700; color: var(--muted); flex-shrink: 0; min-width: 22px; }
+  .option.selected {
+    background: rgba(96,165,250,0.15);
+    border-color: var(--accent);
+  }
+  .option.selected .letter { color: var(--accent); }
+  /* Reveal states (post-submit) */
+  .option.right { background: var(--green-bg); border-color: var(--green-border); }
+  .option.right .letter { color: var(--green); }
+  .option.right::after { content: "✓"; margin-left: auto; color: var(--green); font-weight: 800; font-size: 16px; align-self: center; }
+  .option.wrong-pick { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.55); }
+  .option.wrong-pick .letter { color: var(--red); }
+  .option.wrong-pick::after { content: "✗"; margin-left: auto; color: var(--red); font-weight: 800; font-size: 16px; align-self: center; }
+
+  .free-prompt {
+    padding: 10px 12px; background: var(--card2);
+    border-radius: 10px; font-size: 13px; color: var(--muted);
+    font-style: italic;
+  }
+
+  .row-banner {
+    margin-top: 8px; padding: 6px 10px;
+    border-radius: 8px; font-size: 12px; font-weight: 700;
+    text-align: center;
+  }
+  .row-banner.right { background: var(--green-bg); color: var(--green); }
+  .row-banner.wrong { background: var(--red-bg); color: var(--red); }
+
+  /* Submit bar */
+  .submitbar {
+    position: fixed; left: 0; right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
+    padding: 10px 14px calc(10px + var(--safe-bottom));
+    display: flex; gap: 10px; align-items: center;
+    z-index: 20;
+  }
+  .submitbar .progress-info { flex: 1; font-size: 13px; color: var(--muted); }
+  .submitbar button {
+    padding: 14px 18px;
+    background: var(--accent); color: #0a0a0a;
+    border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 800; cursor: pointer;
+  }
+  .submitbar button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .submitbar button:active { opacity: 0.85; }
+
+  /* Result panel */
+  .result {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 22px 18px; margin-bottom: 14px;
+  }
+  .result .verdict {
+    text-align: center;
+    font-size: 32px; font-weight: 900;
+    padding: 16px 12px; border-radius: 12px;
+    margin-bottom: 14px; letter-spacing: 0.5px;
+  }
+  .result .verdict.pass { background: var(--green-bg); color: var(--green); border: 2px solid var(--green-border); }
+  .result .verdict.fail { background: var(--red-bg); color: var(--red); border: 2px solid rgba(239,68,68,0.55); }
+  .result .stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .result .stat {
+    background: var(--card2); padding: 10px 12px; border-radius: 8px;
+  }
+  .result .stat .lbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .result .stat .val { color: var(--text); font-size: 20px; font-weight: 800; margin-top: 2px; }
+  .result .why-fail {
+    margin-bottom: 10px; padding: 10px 12px;
+    background: var(--red-bg); border-left: 3px solid var(--red);
+    border-radius: 6px; font-size: 13px; color: #f5d7d7;
+  }
+  .result .actions { display: flex; gap: 8px; }
+  .result .actions button {
+    flex: 1; padding: 14px;
+    background: var(--card2); color: var(--text);
+    border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .result .actions button.primary { background: var(--accent); color: #0a0a0a; }
+
+  .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="./">←</a>
+    <span class="title">Mock Exam — Klasse B</span>
+    <button id="restartBtn" style="display:none;">Restart</button>
+    <button id="langBtn">EN</button>
+  </header>
+
+  <main id="main">
+    <div class="empty">Loading…</div>
+  </main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const STATE_KEY = 'dt_state_v1';
+  const EXAM_KEY = 'dt_exam_v1';
+
+  // Real Klasse B mix is roughly: 2 × 5pt, 8 × 4pt, 14 × 3pt, 6 × 2pt = 30 questions / 96 max points
+  const MIX = { 5: 2, 4: 8, 3: 14, 2: 6 };
+  const PASS_MISTAKE_LIMIT = 10;
+
+  let lang = 'en';
+  let state = null; // { questions: [{idx, selected: []}], submitted: bool }
+
+  const T = (en, de) => lang === 'de' ? de : en;
+
+  function loadLang() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      if (s.lang === 'en' || s.lang === 'de') lang = s.lang;
+    } catch {}
+    const u = new URLSearchParams(location.search).get('lang');
+    if (u === 'en' || u === 'de') lang = u;
+  }
+  function saveLang() {
+    try {
+      const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+      cur.lang = lang;
+      localStorage.setItem(STATE_KEY, JSON.stringify(cur));
+    } catch {}
+  }
+  function loadExam() {
+    try { state = JSON.parse(localStorage.getItem(EXAM_KEY)); } catch { state = null; }
+  }
+  function saveExam() {
+    if (state) localStorage.setItem(EXAM_KEY, JSON.stringify(state));
+    else localStorage.removeItem(EXAM_KEY);
+  }
+
+  function pickQuestions() {
+    // Klasse B pool, with options (skip free-text), grouped by points
+    const buckets = { 2: [], 3: [], 4: [], 5: [] };
+    for (let i = 0; i < DT.totalCount(); i++) {
+      const s = DT.structural(i);
+      if (!DT.KLASSE.b.test(s)) continue;
+      if (!(s.options && s.options.length)) continue; // skip free-text
+      const p = DT.pointsNum(s);
+      if (buckets[p]) buckets[p].push(i);
+    }
+    const picks = [];
+    for (const [pStr, n] of Object.entries(MIX)) {
+      const arr = buckets[+pStr] || [];
+      const shuffled = [...arr].sort(() => Math.random() - 0.5);
+      picks.push(...shuffled.slice(0, n));
+    }
+    // Shuffle final order so points aren't grouped
+    return picks.sort(() => Math.random() - 0.5);
+  }
+
+  function startExam() {
+    state = {
+      questions: pickQuestions().map(idx => ({ idx, selected: [] })),
+      submitted: false,
+      startedAt: Date.now()
+    };
+    saveExam();
+    render();
+  }
+
+  function clearExam() {
+    state = null;
+    saveExam();
+    render();
+  }
+
+  function toggleOption(qIdx, letter, isMulti) {
+    if (!state || state.submitted) return;
+    const q = state.questions[qIdx];
+    const set = new Set(q.selected);
+    if (isMulti) {
+      if (set.has(letter)) set.delete(letter); else set.add(letter);
+    } else {
+      set.clear();
+      set.add(letter);
+    }
+    q.selected = [...set];
+    saveExam();
+    // light update — only this card's options
+    const cardEl = document.querySelector(`.card[data-i="${qIdx}"]`);
+    if (cardEl) updateCardOptions(cardEl, qIdx);
+    updateSubmitProgress();
+  }
+
+  function updateCardOptions(cardEl, qIdx) {
+    const q = state.questions[qIdx];
+    const sQ = DT.getQ(q.idx, lang);
+    const sel = new Set(q.selected);
+    cardEl.querySelectorAll('.option[data-letter]').forEach(el => {
+      el.classList.toggle('selected', sel.has(el.dataset.letter));
+    });
+  }
+
+  function updateSubmitProgress() {
+    if (!state || state.submitted) return;
+    const total = state.questions.length;
+    const answered = state.questions.filter(q => q.selected.length > 0).length;
+    const lbl = $('progressInfo');
+    if (lbl) lbl.textContent = T(`${answered} / ${total} answered`, `${answered} / ${total} beantwortet`);
+    const btn = $('submitExamBtn');
+    if (btn) btn.disabled = answered === 0;
+  }
+
+  function submitExam() {
+    if (!state) return;
+    const unanswered = state.questions.filter(q => q.selected.length === 0).length;
+    if (unanswered) {
+      const ok = confirm(T(
+        `${unanswered} question(s) unanswered. They'll count as wrong. Submit anyway?`,
+        `${unanswered} Frage(n) unbeantwortet. Sie zählen als falsch. Trotzdem abgeben?`
+      ));
+      if (!ok) return;
+    }
+    state.submitted = true;
+    saveExam();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function isCorrect(q) {
+    const s = DT.structural(q.idx);
+    const correct = new Set((s.correct_answers || []).map(c => c.letter));
+    const sel = new Set(q.selected);
+    if (sel.size !== correct.size) return false;
+    for (const l of sel) if (!correct.has(l)) return false;
+    return true;
+  }
+
+  function scoreExam() {
+    let mistakePts = 0;
+    let p5Wrong = 0;
+    let p5Total = 0;
+    let rightCount = 0;
+    let wrongCount = 0;
+    for (const q of state.questions) {
+      const s = DT.structural(q.idx);
+      const pts = DT.pointsNum(s);
+      const ok = isCorrect(q);
+      if (pts === 5) p5Total++;
+      if (ok) rightCount++;
+      else {
+        wrongCount++;
+        mistakePts += pts;
+        if (pts === 5) p5Wrong++;
+      }
+    }
+    const reasons = [];
+    if (mistakePts > PASS_MISTAKE_LIMIT) reasons.push(T(`Mistake points exceeded (${mistakePts} > ${PASS_MISTAKE_LIMIT})`, `Fehlerpunkte überschritten (${mistakePts} > ${PASS_MISTAKE_LIMIT})`));
+    if (p5Wrong >= 2) reasons.push(T('Both 5-point questions wrong (auto-fail)', 'Beide 5-Punkte-Fragen falsch (automatisch durchgefallen)'));
+    const passed = reasons.length === 0;
+    return { mistakePts, p5Wrong, p5Total, rightCount, wrongCount, passed, reasons };
+  }
+
+  function render() {
+    document.documentElement.lang = lang;
+    $('langBtn').textContent = lang.toUpperCase();
+    $('restartBtn').textContent = T('Restart', 'Neustart');
+    $('restartBtn').style.display = state ? '' : 'none';
+    $('restartBtn').onclick = () => {
+      if (confirm(T('Discard this exam and start a new one?', 'Diese Prüfung verwerfen und neu starten?'))) {
+        clearExam();
+      }
+    };
+
+    if (!state) {
+      renderSplash();
+    } else if (!state.submitted) {
+      renderExam();
+    } else {
+      renderResult();
+    }
+  }
+
+  function renderSplash() {
+    $('main').innerHTML = `
+      <div class="splash">
+        <h2>${T('Mock Exam — Klasse B', 'Probeprüfung — Klasse B')}</h2>
+        <p>${T(
+          '30 questions following the official mix: two 5-point, eight 4-point, fourteen 3-point, six 2-point. Maximum 96 points.',
+          '30 Fragen nach dem offiziellen Schlüssel: zwei 5-Punkte, acht 4-Punkte, vierzehn 3-Punkte, sechs 2-Punkte. Maximal 96 Punkte.'
+        )}</p>
+        <p><strong>${T('You pass if', 'Sie bestehen, wenn')}:</strong></p>
+        <ul>
+          <li>${T('You make at most 10 mistake points, AND', 'Höchstens 10 Fehlerpunkte, UND')}</li>
+          <li>${T('At least one 5-point question is correct.', 'Mindestens eine 5-Punkte-Frage richtig.')}</li>
+        </ul>
+        <p style="color: var(--muted); font-size: 13px;">${T(
+          'No timer. Tap to select, scroll to next, submit at the bottom. Wrong picks turn red and correct ones turn green at the end.',
+          'Keine Zeit. Tippen, scrollen, am Ende abgeben. Falsche Tipps werden rot, richtige grün.'
+        )}</p>
+        <button class="primary" id="startBtn">${T('Start exam', 'Prüfung starten')}</button>
+      </div>
+    `;
+    $('startBtn').onclick = startExam;
+  }
+
+  function renderExam() {
+    const total = state.questions.length;
+    let html = '';
+    for (let qIdx = 0; qIdx < state.questions.length; qIdx++) {
+      html += renderCard(qIdx, false);
+    }
+    html += `
+      <div class="submitbar">
+        <span class="progress-info" id="progressInfo"></span>
+        <button id="submitExamBtn">${T('Submit', 'Abgeben')}</button>
+      </div>
+    `;
+    $('main').innerHTML = html;
+    wireCards(false);
+    $('submitExamBtn').onclick = submitExam;
+    updateSubmitProgress();
+  }
+
+  function renderResult() {
+    const r = scoreExam();
+    let html = `
+      <div class="result">
+        <div class="verdict ${r.passed ? 'pass' : 'fail'}">
+          ${r.passed ? T('PASS ✓', 'BESTANDEN ✓') : T('FAIL ✗', 'DURCHGEFALLEN ✗')}
+        </div>
+        ${r.reasons.length ? `<div class="why-fail">${r.reasons.map(x => '· ' + esc(x)).join('<br>')}</div>` : ''}
+        <div class="stats">
+          <div class="stat"><div class="lbl">${T('Mistake points','Fehlerpunkte')}</div><div class="val">${r.mistakePts} / ${PASS_MISTAKE_LIMIT}</div></div>
+          <div class="stat"><div class="lbl">${T('Right','Richtig')}</div><div class="val">${r.rightCount} / ${state.questions.length}</div></div>
+          <div class="stat"><div class="lbl">${T('Wrong','Falsch')}</div><div class="val">${r.wrongCount}</div></div>
+          <div class="stat"><div class="lbl">${T('5-pointers','5-Punkte')}</div><div class="val">${r.p5Total - r.p5Wrong} / ${r.p5Total}</div></div>
+        </div>
+        <div class="actions">
+          <button id="newExamBtn" class="primary">${T('New exam', 'Neue Prüfung')}</button>
+        </div>
+      </div>
+    `;
+    for (let qIdx = 0; qIdx < state.questions.length; qIdx++) {
+      html += renderCard(qIdx, true);
+    }
+    $('main').innerHTML = html;
+    wireCards(true);
+    $('newExamBtn').onclick = () => { clearExam(); };
+  }
+
+  function renderCard(qIdx, revealed) {
+    const q = state.questions[qIdx];
+    const s = DT.structural(q.idx);
+    const localized = DT.getQ(q.idx, lang);
+    const correct = new Set((s.correct_answers || []).map(c => c.letter));
+    const sel = new Set(q.selected);
+    const pts = DT.pointsNum(s);
+    const ptsCls = pts === 5 ? 'p5' : (pts === 4 ? 'p4' : '');
+    const isMulti = correct.size > 1;
+
+    let media = '';
+    if (s.image_urls && s.image_urls.length) {
+      media = `<div class="media"><img loading="lazy" decoding="async" src="${escAttr(s.image_urls[0])}" alt="" /></div>`;
+    } else if (s.video_urls && s.video_urls.length) {
+      media = `<div class="media"><video controls playsinline preload="metadata" src="${escAttr(s.video_urls[0])}"></video></div>`;
+    }
+
+    const opts = (localized.options || []).map(o => {
+      let cls = '';
+      if (revealed) {
+        if (correct.has(o.letter)) cls = 'right';
+        else if (sel.has(o.letter)) cls = 'wrong-pick';
+      } else if (sel.has(o.letter)) cls = 'selected';
+      return `<div class="option ${cls}" data-letter="${escAttr(o.letter)}">
+        <span class="letter">${esc(o.letter)}</span>
+        <span class="text">${esc(o.text)}</span>
+      </div>`;
+    }).join('');
+
+    const sourceLink = s.url ? `<a class="source-link" data-source="1" href="${escAttr(s.url)}" target="_blank" rel="noopener">↗</a>` : '';
+
+    let banner = '';
+    if (revealed) {
+      const ok = isCorrect(q);
+      banner = `<div class="row-banner ${ok ? 'right' : 'wrong'}">${ok ? T('✓ Correct','✓ Richtig') : T('✗ Wrong','✗ Falsch')}${pts === 5 ? ' · 5pt' : ''}</div>`;
+    }
+
+    return `<article class="card" data-i="${qIdx}">
+      <div class="qmeta">
+        <span class="num">${qIdx + 1}/30</span>
+        <span class="id">${esc(s.question_id)}</span>
+        ${sourceLink}
+        <span class="pts ${ptsCls}">${esc(s.points)}</span>
+      </div>
+      <div class="qtext">${esc(localized.question_text)}</div>
+      ${media}
+      <div class="options">${opts}</div>
+      ${banner}
+    </article>`;
+  }
+
+  function wireCards(revealed) {
+    if (!revealed) {
+      document.querySelectorAll('.card').forEach(cardEl => {
+        const qIdx = +cardEl.dataset.i;
+        const s = DT.structural(state.questions[qIdx].idx);
+        const correctSize = (s.correct_answers || []).length;
+        const isMulti = correctSize > 1;
+        cardEl.querySelectorAll('.option[data-letter]').forEach(el => {
+          el.addEventListener('click', () => toggleOption(qIdx, el.dataset.letter, isMulti));
+        });
+      });
+    }
+    // Last-frame video thumbnails
+    document.querySelectorAll('video').forEach(v => {
+      v.addEventListener('loadedmetadata', () => {
+        try {
+          const d = v.duration;
+          v.currentTime = (d && isFinite(d) && d > 0.4) ? Math.max(0.1, d - 0.1) : 0.1;
+        } catch (_) {}
+      }, { once: true });
+      v.addEventListener('play', function onPlay() {
+        v.removeEventListener('play', onPlay);
+        if (v.duration && Math.abs(v.duration - v.currentTime) < 1) {
+          v.currentTime = 0;
+        }
+      });
+    });
+  }
+
+  // External-link delegation (iOS PWA standalone safe)
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.source-link[data-source]');
+    if (!a) return;
+    e.preventDefault();
+    const u = a.getAttribute('href');
+    const w = window.open(u, '_blank', 'noopener,noreferrer');
+    if (!w) location.href = u;
+  });
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escAttr(s) { return esc(s); }
+
+  async function init() {
+    try { await DT.load(); }
+    catch (e) { $('main').innerHTML = '<div class="empty">Failed to load.</div>'; return; }
+    loadLang();
+    loadExam();
+    $('langBtn').onclick = () => {
+      lang = lang === 'en' ? 'de' : 'en';
+      saveLang();
+      render();
+    };
+    render();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  init();
+})();
+</script>
+</body>
+</html>
