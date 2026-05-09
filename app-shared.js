@@ -57,13 +57,32 @@ window.DT = (() => {
     return false;
   }
 
+  // Detect motorcycle-specific questions so they can be excluded from the
+  // Klasse B (car) pool. The upstream dataset doesn't tag class, so we
+  // sniff the text for motorcycle/Motorrad mentions in the question or
+  // options.
+  // Match motorcycle-specific question stems (rider-perspective). We only
+  // check question_text — checking options/answers excluded too many general
+  // traffic-awareness questions where a motorcycle was just one mentioned
+  // road user.
+  const MOTORCYCLE_RE = /\b(motorcycle|motorbike|motorrad|krafträd|krad)\b/i;
+  function looksMotorcycle(q) {
+    return MOTORCYCLE_RE.test(q.question_text || '');
+  }
+
+  function inKlasseBThemes(q) {
+    const p = themePrefix(q);
+    return p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.'].includes(p);
+  }
+
   // Klasse presets. Heuristic — upstream dataset isn't tagged with class.
   // Theme 1.x = Grundstoff (basics, all classes). 2.6/2.7/2.8 = LKW-heavy.
+  // Klasse B (car) further excludes anything that mentions motorcycle/Motorrad.
   const KLASSE = {
     all:        { en: 'All themes',                       de: 'Alle Themen',                 test: () => true },
-    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',          test: q => themePrefix(q).startsWith('1.') },
-    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',              test: q => { const p = themePrefix(q); return p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.'].includes(p); } },
-    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => { const p = themePrefix(q); const inB = p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.'].includes(p); return inB && isFactQuestion(q); } },
+    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',          test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) },
+    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',              test: q => inKlasseBThemes(q) && !looksMotorcycle(q) },
+    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && isFactQuestion(q) },
     lkw:        { en: 'LKW topics (Klasse C/CE)',         de: 'LKW-Stoff (Klasse C/CE)',     test: q => ['2.6.','2.7.','2.8.'].includes(themePrefix(q)) }
   };
 
