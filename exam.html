@@ -260,13 +260,26 @@
       const p = DT.pointsNum(s);
       if (buckets[p]) buckets[p].push(i);
     }
+
+    // Skip questions previously answered correctly (in any quiz/exam),
+    // but keep wrong-answered ones eligible. If a bucket runs out of
+    // unfinished questions, fall back to including correct ones too —
+    // we still need to fill 30.
+    let progressMap = {};
+    try { progressMap = JSON.parse(localStorage.getItem('dt_progress_v1') || '{}') || {}; } catch {}
+    const isAnsweredCorrectly = idx => {
+      const qid = DT.structural(idx).question_id;
+      return progressMap[qid] && progressMap[qid].result === 'correct';
+    };
+
     const picks = [];
     for (const [pStr, n] of Object.entries(MIX)) {
-      const arr = buckets[+pStr] || [];
-      const shuffled = [...arr].sort(() => Math.random() - 0.5);
+      const all = buckets[+pStr] || [];
+      const fresh = all.filter(i => !isAnsweredCorrectly(i));
+      const pool = fresh.length >= n ? fresh : all;
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
       picks.push(...shuffled.slice(0, n));
     }
-    // Shuffle final order so points aren't grouped
     return picks.sort(() => Math.random() - 0.5);
   }
 

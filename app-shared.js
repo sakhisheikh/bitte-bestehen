@@ -65,11 +65,24 @@ window.DT = (() => {
   // check question_text — checking options/answers excluded too many general
   // traffic-awareness questions where a motorcycle was just one mentioned
   // road user.
-  // Match motorcycle word-stems so we also catch motorcyclist, Motorradfahrer,
-  // motorbikes, etc. (\w* tail handles the suffix).
-  const MOTORCYCLE_RE = /\b(motorcycl\w*|motorbike\w*|motorrad\w*|krafträd\w*|krad)\b/i;
+  // Identify *rider-perspective* motorcycle questions and motorcycle-gear
+  // questions. Awareness-style questions ("a motorcyclist approaches you",
+  // "popular with motorcyclists") are intentionally NOT excluded — Klasse B
+  // drivers still need them.
   function looksMotorcycle(q) {
-    return MOTORCYCLE_RE.test(q.question_text || '');
+    const text = (q.question_text || '').toLowerCase();
+    return (
+      /\bas a motorcycl/.test(text) ||
+      /\bfor a motorcycl/.test(text) ||
+      /\b(your|on (a|your)|riding (a|your|the)|drive a|driving a|operate a|park your|safeguard your) (motorcycle|motorbike)\b/.test(text) ||
+      /\b(motorcycle|motorbike)\W+(helmet|helmets|boot|boots|leather|jacket|gloves|protective|prop\s?stand|stand|chain|exhaust|engine|fall|skid|crash|fitness|tyre|tyres|tire|tires)\b/.test(text) ||
+      /\bmotorcyclists?\W+(safety|protective|risk|fall)/.test(text) ||
+      // German
+      /\bals motorradfahr/.test(text) ||
+      /\b(ihr|auf (ihrem|deinem|einem)) motorrad/.test(text) ||
+      /\bmotorrad\s?fahr/.test(text) ||
+      /\bmotorrad(helm|stiefel|kleidung|kombi|reifen|kette|auspuff|ständer|sturz|fahrer)/.test(text)
+    );
   }
 
   function inKlasseBThemes(q) {
