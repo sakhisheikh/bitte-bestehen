@@ -144,10 +144,7 @@
 <body>
   <header class="topbar">
     <div class="row1">
-      <a href="feed.html">←</a>
-      <a href="exam.html">Exam</a>
-      <a href="rules.html">Rules</a>
-      <a href="cheatsheet.html">Sheet</a>
+      <button class="toolbtn" id="menuBtn" aria-label="Menu" style="font-size:16px; line-height:1;">☰</button>
       <span class="title" id="titleEl">Signs</span>
       <button class="toolbtn" id="langBtn">EN</button>
       <span id="count" style="font-size:11px;color:var(--muted);"></span>
@@ -336,6 +333,8 @@
       else $('topFab').classList.remove('show');
     }, { passive: true });
     buildChips();
+    const drawerCtl = DT.installDrawer('signs');
+    $('menuBtn').onclick = drawerCtl.open;
     render();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   }

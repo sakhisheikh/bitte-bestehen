@@ -230,6 +230,107 @@ window.DT = (() => {
     saveMistakes();
   }
 
+  // Shared hamburger drawer — injected on demand by views that call
+  // DT.installDrawer(currentKey, { onSearch, onShuffle }). Each view
+  // adds its own ☰ button somewhere and wires it to drawerCtl.open.
+  function installDrawer(currentKey, opts = {}) {
+    if (!document.getElementById('dt-drawer-style')) {
+      const style = document.createElement('style');
+      style.id = 'dt-drawer-style';
+      style.textContent = `
+        .dt-drawer-backdrop {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.55);
+          z-index: 80;
+          opacity: 0; pointer-events: none;
+          transition: opacity 200ms ease;
+        }
+        .dt-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        .dt-drawer {
+          position: fixed; left: 0; top: 0; bottom: 0;
+          width: 78%; max-width: 320px;
+          background: #161616;
+          z-index: 81;
+          transform: translateX(-100%);
+          transition: transform 220ms ease;
+          overflow-y: auto;
+          padding: calc(12px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom));
+          border-right: 1px solid #222;
+          color: #f5f5f5;
+          font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+          font-size: 15px;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .dt-drawer.open { transform: translateX(0); }
+        .dt-drawer h4 {
+          margin: 14px 0 6px; font-size: 11px; color: #888;
+          text-transform: uppercase; letter-spacing: 0.6px;
+        }
+        .dt-drawer h4:first-child { margin-top: 0; }
+        .dt-drawer a, .dt-drawer .dt-drawer-action {
+          display: flex; align-items: center;
+          gap: 10px; width: 100%;
+          padding: 12px 14px;
+          background: #1f1f1f; color: #f5f5f5;
+          border: none; border-radius: 10px;
+          font-size: 15px; font-weight: 600; text-decoration: none;
+          margin-bottom: 6px; cursor: pointer;
+          text-align: left;
+          font-family: inherit;
+          box-sizing: border-box;
+        }
+        .dt-drawer a.current { background: #60a5fa; color: #0a0a0a; }
+        .dt-drawer .icon { font-size: 18px; min-width: 22px; text-align: center; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    let drawer = document.getElementById('dt-drawer');
+    let backdrop = document.getElementById('dt-drawer-backdrop');
+    if (!drawer) {
+      backdrop = document.createElement('div');
+      backdrop.className = 'dt-drawer-backdrop';
+      backdrop.id = 'dt-drawer-backdrop';
+      document.body.appendChild(backdrop);
+      drawer = document.createElement('aside');
+      drawer.className = 'dt-drawer';
+      drawer.id = 'dt-drawer';
+      drawer.setAttribute('aria-label', 'Menu');
+      document.body.appendChild(drawer);
+    }
+
+    const items = [
+      { key: 'feed',       href: 'feed.html',       icon: '📜', label: 'Quiz (feed)' },
+      { key: 'quiz',       href: 'quiz.html',       icon: '🃏', label: 'Single card' },
+      { key: 'exam',       href: 'exam.html',       icon: '📋', label: 'Mock Exam' },
+      { key: 'cheatsheet', href: 'cheatsheet.html', icon: '📊', label: 'Cheatsheet' },
+      { key: 'rules',      href: 'rules.html',      icon: '📖', label: 'Rule Book' },
+      { key: 'signs',      href: 'signs.html',      icon: '🚸', label: 'Signs' }
+    ];
+    let html = '<h4>Views</h4>';
+    for (const it of items) {
+      const cls = it.key === currentKey ? ' class="current"' : '';
+      html += `<a href="${it.href}" data-key="${it.key}"${cls}><span class="icon">${it.icon}</span> ${it.label}</a>`;
+    }
+    const acts = [];
+    if (opts.onSearch)  acts.push({ id: 'dt-drawer-search',  icon: '⌕',  label: 'Search' });
+    if (opts.onShuffle) acts.push({ id: 'dt-drawer-shuffle', icon: '🔀', label: 'Shuffle' });
+    if (acts.length) {
+      html += '<h4>Quick actions</h4>';
+      for (const a of acts) {
+        html += `<button id="${a.id}" class="dt-drawer-action"><span class="icon">${a.icon}</span> ${a.label}</button>`;
+      }
+    }
+    drawer.innerHTML = html;
+
+    const open  = () => { drawer.classList.add('open');  backdrop.classList.add('open'); };
+    const close = () => { drawer.classList.remove('open'); backdrop.classList.remove('open'); };
+    backdrop.onclick = close;
+    if (opts.onSearch)  document.getElementById('dt-drawer-search').onclick  = () => { close(); opts.onSearch();  };
+    if (opts.onShuffle) document.getElementById('dt-drawer-shuffle').onclick = () => { close(); opts.onShuffle(); };
+    return { open, close };
+  }
+
   return {
     load, getQ, structural, all, totalCount,
     themePrefix, pointsNum,
@@ -237,6 +338,7 @@ window.DT = (() => {
     loadSettings, saveSettings,
     isFavorite, toggleFavorite, favoriteCount, favoriteIds, favoriteIndices,
     recordOutcome, isMistake, mistakeCount, mistakeIds, mistakeIndices, clearMistakes,
-    search
+    search,
+    installDrawer
   };
 })();

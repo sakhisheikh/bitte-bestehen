@@ -282,19 +282,13 @@
   <header class="topbar">
     <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     <div class="row">
-      <div class="left">
-        <a href="exam.html">Exam</a>
-        <a href="rules.html">Rules</a>
-        <a href="signs.html">Signs</a>
-        <a href="cheatsheet.html">Sheet</a>
-        <a href="quiz.html" title="Single-card mode">Card</a>
+      <div class="left" style="min-width:0; overflow:hidden;">
+        <button class="toolbtn" id="menuBtn" aria-label="Menu" style="font-size:16px; line-height:1; padding:6px 10px;">☰</button>
         <span id="counter">…</span>
-        <span id="filterLabel"></span>
+        <span id="filterLabel" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
       </div>
-      <div class="right">
+      <div class="right" style="flex-shrink:0;">
         <button class="toolbtn" id="langBtn" title="Toggle language">EN</button>
-        <button class="toolbtn" id="searchBtn" title="Search">⌕</button>
-        <button class="toolbtn" id="shuffleBtn">Shuffle</button>
         <button class="toolbtn" id="filterBtn">Filter</button>
       </div>
     </div>
@@ -952,14 +946,16 @@
     if (!order.length || order.length > DT.totalCount()) {
       rebuildOrder();
     }
-    $('shuffleBtn').onclick = shuffleOrder;
     $('filterBtn').onclick = openFilterSheet;
-    $('searchBtn').onclick = toggleSearch;
     $('searchInput').addEventListener('input', onSearchInput);
     $('searchClear').onclick = clearSearch;
     $('langBtn').onclick = () => { lang = lang === 'en' ? 'de' : 'en'; saveState(); render(); };
     $('topFab').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
+
+    // Hamburger drawer (shared)
+    const drawerCtl = DT.installDrawer('feed', { onSearch: toggleSearch, onShuffle: shuffleOrder });
+    $('menuBtn').onclick = drawerCtl.open;
 
     // Restore search bar visibility if a query was persisted
     if (searchQuery) {

@@ -12,6 +12,7 @@
 <title>Bitte Bestehen — Rule Book</title>
 <meta name="robots" content="noindex, nofollow" />
 <meta name="referrer" content="no-referrer" />
+<script src="app-shared.js"></script>
 
 <style>
   :root {
@@ -132,11 +133,7 @@
 </head>
 <body data-lang="en">
   <header class="topbar">
-    <a href="feed.html">←</a>
-    <a href="exam.html">Exam</a>
-    <a href="signs.html">Signs</a>
-    <a href="feed.html">Feed</a>
-    <a href="cheatsheet.html">Sheet</a>
+    <button class="toolbtn" id="menuBtn" aria-label="Menu" style="font-size:16px; line-height:1;">☰</button>
     <span class="title">Rule Book — Klasse B</span>
     <button class="toolbtn" id="langBtn">EN</button>
   </header>
@@ -802,6 +799,12 @@
 
   setLang(getLang());
   $('langBtn').onclick = () => setLang(document.body.dataset.lang === 'en' ? 'de' : 'en');
+
+  // Hamburger drawer (no question data needed)
+  if (window.DT && DT.installDrawer) {
+    const drawerCtl = DT.installDrawer('rules');
+    $('menuBtn').onclick = drawerCtl.open;
+  }
 
   $('topFab').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   window.addEventListener('scroll', () => {
