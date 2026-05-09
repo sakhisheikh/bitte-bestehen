@@ -217,6 +217,39 @@
     font-size: 19px; font-weight: 700;
     text-align: center;
   }
+  /* Test/practice mode states */
+  .option.selected {
+    background: rgba(96,165,250,0.15);
+    border-color: var(--accent);
+    cursor: pointer;
+  }
+  .option.selected .letter { color: var(--accent); }
+  .option.wrong-pick {
+    background: rgba(239,68,68,0.15);
+    border-color: rgba(239,68,68,0.55);
+  }
+  .option.wrong-pick .letter { color: var(--red); }
+  .option.wrong-pick::after {
+    content: "✗"; margin-left: auto;
+    color: var(--red); font-weight: 800; font-size: 16px;
+    align-self: center;
+  }
+  .option.tappable { cursor: pointer; }
+  .submit-btn {
+    margin-top: 8px; width: 100%;
+    padding: 12px; background: var(--accent); color: #0a0a0a;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .submit-btn:active { opacity: 0.85; }
+  .result-banner {
+    margin-top: 8px; padding: 8px 12px;
+    border-radius: 8px; font-size: 13px; font-weight: 700;
+    text-align: center;
+  }
+  .result-banner.correct { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .result-banner.wrong { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.55); }
 </style>
 </head>
 <body>
@@ -256,6 +289,8 @@
   let order = [];
   let p5Only = false;
   let favOnly = false;
+  let mistakesOnly = false;
+  let mode = 'memorize'; // 'memorize' | 'test'
   let klasseKey = 'all';
   let lang = 'en';
   let mediaIO = null;
@@ -265,9 +300,21 @@
   let scrollRestored = false;
   const T = (en, de) => lang === 'de' ? de : en;
 
+  // Per-question test state shared with SPA (dt_progress_v1)
+  const PROGRESS_KEY = 'dt_progress_v1';
+  let progress = {};       // qid -> { result, selected }
+  let pending = {};        // qid -> Set<letter> while unsubmitted
+  function loadProgress() {
+    try { progress = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}') || {}; } catch { progress = {}; }
+  }
+  function saveProgress() {
+    try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch {}
+  }
+
   function saveState() {
     const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
-    cur.p5Only = p5Only; cur.favOnly = favOnly; cur.klasseKey = klasseKey; cur.lang = lang;
+    cur.p5Only = p5Only; cur.favOnly = favOnly; cur.mistakesOnly = mistakesOnly;
+    cur.mode = mode; cur.klasseKey = klasseKey; cur.lang = lang;
     localStorage.setItem(STATE_KEY, JSON.stringify(cur));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
@@ -277,6 +324,8 @@
       const o = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
       if (typeof s.p5Only === 'boolean') p5Only = s.p5Only;
       if (typeof s.favOnly === 'boolean') favOnly = s.favOnly;
+      if (typeof s.mistakesOnly === 'boolean') mistakesOnly = s.mistakesOnly;
+      if (s.mode === 'memorize' || s.mode === 'test') mode = s.mode;
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
       if (typeof s.lang === 'string') lang = s.lang;
       if (Array.isArray(o)) order = o;
@@ -291,6 +340,10 @@
     if (favOnly) {
       const favs = new Set(DT.favoriteIds());
       pool = pool.filter(i => favs.has(DT.structural(i).question_id));
+    }
+    if (mistakesOnly) {
+      const ms = new Set(DT.mistakeIds());
+      pool = pool.filter(i => ms.has(DT.structural(i).question_id));
     }
     order = pool;
     saveState();
@@ -318,9 +371,20 @@
       return;
     }
     const labels = [];
+    if (mode === 'test') labels.push('TEST');
     if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
     if (p5Only) labels.push(T('5-pt', '5-Pkt'));
     if (favOnly) labels.push('★');
+    if (mistakesOnly) labels.push('✗');
+    if (mode === 'test') {
+      let right = 0, wrong = 0;
+      for (const i of order) {
+        const qid = DT.structural(i).question_id;
+        const p = progress[qid];
+        if (p) { if (p.result === 'correct') right++; else wrong++; }
+      }
+      labels.push(`${right}✓·${wrong}✗`);
+    }
     $('filterLabel').textContent = labels.length ? '· ' + labels.join(' · ') : '';
 
     const naturalOrder = isNaturalOrder();
@@ -347,9 +411,146 @@
     setupLazyMedia();
     setupCommentToggles();
     setupStarButtons();
+    setupTestMode();
     setupPositionTracker();
     restoreScrollPosition();
     updateCounter();
+  }
+
+  function setupTestMode() {
+    if (mode !== 'test') return;
+
+    // Tap an option in an unsubmitted card to toggle selection
+    document.querySelectorAll('.option.tappable[data-letter][data-qid]').forEach(el => {
+      el.addEventListener('click', () => {
+        const qid = el.dataset.qid;
+        const letter = el.dataset.letter;
+        const idx = lookupIdxByQid(qid);
+        if (idx == null) return;
+        const sQ = DT.structural(idx);
+        const isMulti = (sQ.correct_answers || []).length > 1;
+        if (!pending[qid]) pending[qid] = new Set();
+        const set = pending[qid];
+        if (isMulti) {
+          if (set.has(letter)) set.delete(letter); else set.add(letter);
+        } else {
+          set.clear(); set.add(letter);
+        }
+        rerenderCardOptions(qid);
+      });
+    });
+
+    // Submit per card
+    document.querySelectorAll('.submit-btn[data-submit-qid]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const qid = btn.dataset.submitQid;
+        const idx = lookupIdxByQid(qid);
+        if (idx == null) return;
+        const sQ = DT.structural(idx);
+        const correct = new Set((sQ.correct_answers || []).map(c => c.letter));
+        const sel = pending[qid] || new Set();
+        const right = sel.size === correct.size && [...sel].every(l => correct.has(l));
+        progress[qid] = { result: right ? 'correct' : 'wrong', selected: [...sel] };
+        saveProgress();
+        DT.recordOutcome(qid, right);
+        delete pending[qid];
+        rerenderCard(qid);
+      });
+    });
+  }
+
+  // Map a qid back to its index in DT (used by feed since cards live as 'order' entries)
+  let _qidIdxCache = null;
+  function lookupIdxByQid(qid) {
+    if (!_qidIdxCache) {
+      _qidIdxCache = new Map();
+      for (let i = 0; i < DT.totalCount(); i++) {
+        _qidIdxCache.set(DT.structural(i).question_id, i);
+      }
+    }
+    return _qidIdxCache.get(qid);
+  }
+
+  function rerenderCardOptions(qid) {
+    // Light update of the card's option pills + submit button
+    const cardEl = document.querySelector(`.card[data-qid="${cssEsc(qid)}"]`);
+    if (!cardEl) return;
+    const sQ = DT.structural(lookupIdxByQid(qid));
+    const localized = DT.getQ(lookupIdxByQid(qid), lang);
+    const correct = new Set((sQ.correct_answers || []).map(c => c.letter));
+    const userSet = pending[qid] || new Set();
+    const optsEl = cardEl.querySelector('.options');
+    if (!optsEl) return;
+    const html = (localized.options || []).map(o => {
+      const isSel = userSet.has(o.letter);
+      const cls = isSel ? 'selected tappable' : 'tappable';
+      return `<div class="option ${cls}" data-letter="${escAttr(o.letter)}" data-qid="${escAttr(qid)}">
+        <span class="letter">${esc(o.letter)}</span>
+        <span class="text">${esc(o.text)}</span>
+      </div>`;
+    }).join('');
+    optsEl.innerHTML = html;
+    const btn = cardEl.querySelector('.submit-btn');
+    if (btn) btn.disabled = userSet.size === 0;
+    // Re-attach click handlers to the new option elements
+    setupTestModeForCard(cardEl);
+  }
+
+  function rerenderCard(qid) {
+    // Full re-render of one card after submit (to show banner + reveal styling)
+    const cardEl = document.querySelector(`.card[data-qid="${cssEsc(qid)}"]`);
+    if (!cardEl) return;
+    const idx = lookupIdxByQid(qid);
+    if (idx == null) return;
+    const localized = DT.getQ(idx, lang);
+    // Find the position in order to keep the same data-idx
+    const orderPos = order.indexOf(idx);
+    const newHtml = card(localized, orderPos >= 0 ? orderPos : 0);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = newHtml.trim();
+    cardEl.replaceWith(tmp.firstChild);
+    // Re-wire just this card's media + comments + star + test
+    setupLazyMedia();
+    setupCommentToggles();
+    setupStarButtons();
+    setupTestMode();
+    updateCounter();
+  }
+
+  function setupTestModeForCard(cardEl) {
+    if (mode !== 'test') return;
+    cardEl.querySelectorAll('.option.tappable[data-letter][data-qid]').forEach(el => {
+      el.addEventListener('click', () => {
+        const qid = el.dataset.qid;
+        const letter = el.dataset.letter;
+        const idx = lookupIdxByQid(qid);
+        if (idx == null) return;
+        const sQ = DT.structural(idx);
+        const isMulti = (sQ.correct_answers || []).length > 1;
+        if (!pending[qid]) pending[qid] = new Set();
+        const set = pending[qid];
+        if (isMulti) { if (set.has(letter)) set.delete(letter); else set.add(letter); }
+        else { set.clear(); set.add(letter); }
+        rerenderCardOptions(qid);
+      });
+    });
+    const btn = cardEl.querySelector('.submit-btn[data-submit-qid]');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const qid = btn.dataset.submitQid;
+        const idx = lookupIdxByQid(qid);
+        if (idx == null) return;
+        const sQ = DT.structural(idx);
+        const correct = new Set((sQ.correct_answers || []).map(c => c.letter));
+        const sel = pending[qid] || new Set();
+        const right = sel.size === correct.size && [...sel].every(l => correct.has(l));
+        progress[qid] = { result: right ? 'correct' : 'wrong', selected: [...sel] };
+        saveProgress();
+        DT.recordOutcome(qid, right);
+        delete pending[qid];
+        rerenderCard(qid);
+      });
+    }
   }
 
   function setupStarButtons() {
@@ -399,10 +600,40 @@
     }
 
     const hasOptions = q.options && q.options.length > 0;
+    const submittedRecord = mode === 'test' ? progress[q.question_id] : null;
     let answerBlock;
     if (!hasOptions && q.correct_answers && q.correct_answers.length) {
       const ans = q.correct_answers.map(c => esc(c.text || c.letter)).join(' / ');
       answerBlock = `<div class="free-answer">${T('Answer', 'Antwort')}: ${ans}</div>`;
+    } else if (mode === 'test') {
+      // Test mode: tap to select, Submit to reveal. Reuses dt_progress_v1.
+      const userSet = submittedRecord
+        ? new Set(submittedRecord.selected || [])
+        : (pending[q.question_id] || new Set());
+      const opts = (q.options || []).map(o => {
+        const isCorrect = correctSet.has(o.letter);
+        const isSel = userSet.has(o.letter);
+        let cls = '';
+        if (submittedRecord) {
+          if (isCorrect) cls = 'correct';
+          else if (isSel) cls = 'wrong-pick';
+        } else {
+          cls = isSel ? 'selected tappable' : 'tappable';
+        }
+        return `<div class="option ${cls}" data-letter="${escAttr(o.letter)}" data-qid="${escAttr(q.question_id)}">
+          <span class="letter">${esc(o.letter)}</span>
+          <span class="text">${esc(o.text)}</span>
+        </div>`;
+      }).join('');
+      let footer = '';
+      if (submittedRecord) {
+        const r = submittedRecord.result;
+        footer = `<div class="result-banner ${r}">${r === 'correct' ? T('✓ Correct','✓ Richtig') : T('✗ Wrong','✗ Falsch')}</div>`;
+      } else {
+        const enabled = userSet.size > 0;
+        footer = `<button class="submit-btn" data-submit-qid="${escAttr(q.question_id)}"${enabled ? '' : ' disabled'}>${T('Submit','Bestätigen')}</button>`;
+      }
+      answerBlock = `<div class="options">${opts}</div>${footer}`;
     } else {
       const opts = (q.options || []).map(o => {
         const correct = correctSet.has(o.letter);
@@ -542,8 +773,15 @@
   function openFilterSheet() {
     const klasseKeys = ['all','grundstoff','b','b_facts','lkw'];
     const favCount = DT.favoriteCount();
+    const mistakesCount = DT.mistakeCount();
     const html = `
-      <h3>${T('Favorites', 'Favoriten')}</h3>
+      <h3>${T('Mode', 'Modus')}</h3>
+      <button class="${mode === 'memorize' ? 'active' : ''}" data-action="mode" data-v="memorize">${T('Memorize (pre-highlighted)', 'Auswendiglernen (vorgehoben)')}</button>
+      <button class="${mode === 'test' ? 'active' : ''}" data-action="mode" data-v="test">${T('Test (tap & submit)', 'Selbsttest (tippen & bestätigen)')}</button>
+      <h3 style="margin-top:14px;">${T('My mistakes', 'Meine Fehler')}</h3>
+      <button class="${!mistakesOnly ? 'active' : ''}" data-action="mistakes" data-v="0">${T('All questions', 'Alle Fragen')}</button>
+      <button class="${mistakesOnly ? 'active' : ''}" data-action="mistakes" data-v="1" ${mistakesCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>✗ ${T('Mistakes only', 'Nur Fehler')} (${mistakesCount})</button>
+      <h3 style="margin-top:14px;">${T('Favorites', 'Favoriten')}</h3>
       <button class="${!favOnly ? 'active' : ''}" data-action="fav" data-v="0">${T('All questions', 'Alle Fragen')}</button>
       <button class="${favOnly ? 'active' : ''}" data-action="fav" data-v="1" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ ${T('Favorites only', 'Nur Favoriten')} (${favCount})</button>
       <h3 style="margin-top:14px;">${T('Klasse', 'Klasse')}</h3>
@@ -573,6 +811,8 @@
         if (a === 'klasse') { klasseKey = v; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
         else if (a === 'p5') { p5Only = v === '1'; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
         else if (a === 'fav') { favOnly = v === '1'; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
+        else if (a === 'mistakes') { mistakesOnly = v === '1'; rebuildOrder(); localStorage.removeItem(FEED_POS_KEY); }
+        else if (a === 'mode') { mode = v; pending = {}; }
         else if (a === 'lang') { lang = v; }
         saveState();
         render();
@@ -596,6 +836,7 @@
       return;
     }
     loadState();
+    loadProgress();
     if (!order.length || order.length > DT.totalCount()) {
       rebuildOrder();
     }
