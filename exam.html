@@ -334,6 +334,12 @@
       if (!ok) return;
     }
     state.submitted = true;
+    // Log each question's outcome to the global mistakes store so they
+    // surface in the SPA "Mistakes only" filter alongside Test-mode wrongs.
+    for (const q of state.questions) {
+      const s = DT.structural(q.idx);
+      DT.recordOutcome(s.question_id, isCorrect(q));
+    }
     saveExam();
     render();
     window.scrollTo({ top: 0, behavior: 'smooth' });

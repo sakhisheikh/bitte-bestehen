@@ -160,12 +160,49 @@ window.DT = (() => {
     return out.slice(0, limit).map(x => x.idx);
   }
 
+  // Mistakes — qids the user has gotten wrong in Quiz Test mode or Mock Exam.
+  // Auto-cleared per-question whenever the user gets it right in any mode.
+  const MISTAKES_KEY = 'dt_mistakes_v1';
+  let _mistakeCache = null;
+  function loadMistakes() {
+    if (_mistakeCache) return _mistakeCache;
+    try { _mistakeCache = new Set(JSON.parse(localStorage.getItem(MISTAKES_KEY) || '[]')); }
+    catch { _mistakeCache = new Set(); }
+    return _mistakeCache;
+  }
+  function saveMistakes() {
+    if (!_mistakeCache) return;
+    localStorage.setItem(MISTAKES_KEY, JSON.stringify([..._mistakeCache]));
+  }
+  function recordOutcome(qid, isCorrect) {
+    const s = loadMistakes();
+    if (isCorrect) s.delete(qid);
+    else s.add(qid);
+    saveMistakes();
+  }
+  function isMistake(qid) { return loadMistakes().has(qid); }
+  function mistakeCount() { return loadMistakes().size; }
+  function mistakeIds() { return [...loadMistakes()]; }
+  function mistakeIndices() {
+    const ids = loadMistakes();
+    const out = [];
+    for (let i = 0; i < dataEN.length; i++) {
+      if (ids.has(dataEN[i].question_id)) out.push(i);
+    }
+    return out;
+  }
+  function clearMistakes() {
+    _mistakeCache = new Set();
+    saveMistakes();
+  }
+
   return {
     load, getQ, structural, all, totalCount,
     themePrefix, pointsNum,
     KLASSE, klasseLabel, klasseCount, poolIndices,
     loadSettings, saveSettings,
     isFavorite, toggleFavorite, favoriteCount, favoriteIds, favoriteIndices,
+    recordOutcome, isMistake, mistakeCount, mistakeIds, mistakeIndices, clearMistakes,
     search
   };
 })();

@@ -473,6 +473,7 @@
   let pos = 0;              // current position in order
   let p5Only = false;       // 5-points-only toggle
   let favOnly = false;      // favorites-only toggle
+  let mistakesOnly = false; // wrong-answers-only toggle
   let klasseKey = 'all';    // all | grundstoff | b | lkw
   let lang = 'en';          // en | de
   let searchQuery = '';     // live search filter; empty = no search
@@ -494,7 +495,7 @@
 
   /* ---------- persistence ---------- */
   function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, klasseKey, lang, searchQuery, mode, commentExpanded }));
+    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, mistakesOnly, klasseKey, lang, searchQuery, mode, commentExpanded }));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
   function loadState() {
@@ -504,6 +505,7 @@
       if (typeof s.pos === 'number') pos = s.pos;
       if (typeof s.p5Only === 'boolean') p5Only = s.p5Only;
       if (typeof s.favOnly === 'boolean') favOnly = s.favOnly;
+      if (typeof s.mistakesOnly === 'boolean') mistakesOnly = s.mistakesOnly;
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
       if (typeof s.lang === 'string') lang = s.lang;
       if (typeof s.searchQuery === 'string') searchQuery = s.searchQuery;
@@ -539,6 +541,10 @@
     if (favOnly) {
       const favs = new Set(DT.favoriteIds());
       pool = pool.filter(i => favs.has(DT.structural(i).question_id));
+    }
+    if (mistakesOnly) {
+      const ms = new Set(DT.mistakeIds());
+      pool = pool.filter(i => ms.has(DT.structural(i).question_id));
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -601,6 +607,7 @@
     if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
     if (p5Only) labels.push(T('5-pt only', 'nur 5-Punkte'));
     if (favOnly) labels.push(T('★ favorites', '★ Favoriten'));
+    if (mistakesOnly) labels.push(T('✗ mistakes', '✗ Fehler'));
     if (searchQuery) labels.push(`"${searchQuery}"`);
 
     // Stats in test mode: right/wrong/unseen counts within current order
@@ -856,6 +863,7 @@
       selected
     };
     saveProgress();
+    DT.recordOutcome(q.question_id, right);
     currentSelected = new Set();
     render(); // full re-render to show result-banner and reveal styling
   }
@@ -864,11 +872,16 @@
   function openFilterSheet() {
     const klasseKeys = ['all','grundstoff','b','b_facts','lkw'];
     const favCount = DT.favoriteCount();
+    const mistakesCount = DT.mistakeCount();
     const progressCount = Object.keys(progress).length;
     const html = `
       <h3>${T('Mode', 'Modus')}</h3>
       <button class="${mode === 'memorize' ? 'active' : ''}" data-action="mode" data-v="memorize">${T('Memorize (answers pre-highlighted)', 'Auswendiglernen (Antworten vorgehoben)')}</button>
       <button class="${mode === 'test' ? 'active' : ''}" data-action="mode" data-v="test">${T('Test yourself (tap & submit)', 'Selbsttest (tippen & bestätigen)')}</button>
+      <h3 style="margin-top:14px;">${T('My mistakes', 'Meine Fehler')}</h3>
+      <button class="${!mistakesOnly ? 'active' : ''}" data-action="mistakes" data-v="0">${T('All questions', 'Alle Fragen')}</button>
+      <button class="${mistakesOnly ? 'active' : ''}" data-action="mistakes" data-v="1" ${mistakesCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>✗ ${T('Mistakes only', 'Nur Fehler')} (${mistakesCount})</button>
+      <button class="danger" data-action="clear-mistakes" ${mistakesCount === 0 ? 'disabled style="opacity:0.5;"' : ''} style="font-size:13px;">${T('Clear mistakes log', 'Fehler-Log löschen')}</button>
       <h3 style="margin-top:14px;">${T('Favorites', 'Favoriten')}</h3>
       <button class="${!favOnly ? 'active' : ''}" data-action="fav" data-v="0">${T('All questions', 'Alle Fragen')}</button>
       <button class="${favOnly ? 'active' : ''}" data-action="fav" data-v="1" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ ${T('Favorites only', 'Nur Favoriten')} (${favCount})</button>
@@ -892,11 +905,12 @@
         const a = b.dataset.action, v = b.dataset.v;
         if (a === 'close') { $('modal').classList.remove('open'); return; }
         if (a === 'reset') {
-          if (confirm(T('Reset everything (filters, position, test answers, favorites)?', 'Alles zurücksetzen (Filter, Position, Testantworten, Favoriten)?'))) {
+          if (confirm(T('Reset everything (filters, position, test answers, favorites, mistakes)?', 'Alles zurücksetzen (Filter, Position, Testantworten, Favoriten, Fehler)?'))) {
             localStorage.removeItem(STATE_KEY);
             localStorage.removeItem(ORDER_KEY);
             localStorage.removeItem(PROGRESS_KEY);
-            klasseKey = 'all'; p5Only = false; favOnly = false; searchQuery = ''; mode = 'memorize';
+            DT.clearMistakes();
+            klasseKey = 'all'; p5Only = false; favOnly = false; mistakesOnly = false; searchQuery = ''; mode = 'memorize';
             progress = {};
             currentSelected = new Set();
             rebuildOrder();
@@ -915,9 +929,20 @@
           $('modal').classList.remove('open');
           return;
         }
+        if (a === 'clear-mistakes') {
+          if (confirm(T('Clear the mistakes log? You can still re-build it by getting questions wrong again.', 'Fehler-Log löschen? Es füllt sich von selbst, wenn du Fragen falsch beantwortest.'))) {
+            DT.clearMistakes();
+            if (mistakesOnly) { mistakesOnly = false; rebuildOrder(); }
+            saveState();
+            render();
+          }
+          $('modal').classList.remove('open');
+          return;
+        }
         if (a === 'klasse') { klasseKey = v; currentSelected = new Set(); rebuildOrder(); }
         else if (a === 'p5')  { p5Only = v === '1'; currentSelected = new Set(); rebuildOrder(); }
         else if (a === 'fav') { favOnly = v === '1'; currentSelected = new Set(); rebuildOrder(); }
+        else if (a === 'mistakes') { mistakesOnly = v === '1'; currentSelected = new Set(); rebuildOrder(); }
         else if (a === 'mode'){ mode = v; currentSelected = new Set(); }
         else if (a === 'lang') { lang = v; }
         saveState();

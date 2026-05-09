@@ -335,8 +335,10 @@
     };
     const p5Count = (() => { let n = 0; for (let i = 0; i < total; i++) if (DT.pointsNum(DT.structural(i)) === 5) n++; return n; })();
 
+    const mistakesCount = DT.mistakeCount();
     const chips = [
       `<button class="chip ${active==='all'?'active':''}" data-t="all">${T('All','Alle')} (${total})</button>`,
+      `<button class="chip ${active==='mistakes'?'active':''}" data-t="mistakes" ${mistakesCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>✗ (${mistakesCount})</button>`,
       `<button class="chip ${active==='fav'?'active':''}" data-t="fav" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ (${favCount})</button>`,
       `<button class="chip ${active==='p5'?'active':''}" data-t="p5">${T('5-pt only','Nur 5-Pkt')} (${p5Count})</button>`,
       ...klasses.map(k => `<button class="chip ${active==='klasse:'+k?'active':''}" data-t="klasse:${k}">${esc(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`),
@@ -358,6 +360,9 @@
     if (active === 'all') pool = Array.from({length: DT.totalCount()}, (_, i) => i);
     else if (active === 'fav') {
       pool = DT.favoriteIndices();
+    }
+    else if (active === 'mistakes') {
+      pool = DT.mistakeIndices();
     }
     else if (active === 'p5') {
       pool = [];
