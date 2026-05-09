@@ -65,7 +65,9 @@ window.DT = (() => {
   // check question_text — checking options/answers excluded too many general
   // traffic-awareness questions where a motorcycle was just one mentioned
   // road user.
-  const MOTORCYCLE_RE = /\b(motorcycle|motorbike|motorrad|krafträd|krad)\b/i;
+  // Match motorcycle word-stems so we also catch motorcyclist, Motorradfahrer,
+  // motorbikes, etc. (\w* tail handles the suffix).
+  const MOTORCYCLE_RE = /\b(motorcycl\w*|motorbike\w*|motorrad\w*|krafträd\w*|krad)\b/i;
   function looksMotorcycle(q) {
     return MOTORCYCLE_RE.test(q.question_text || '');
   }
