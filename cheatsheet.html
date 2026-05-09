@@ -336,11 +336,18 @@
     const p5Count = (() => { let n = 0; for (let i = 0; i < total; i++) if (DT.pointsNum(DT.structural(i)) === 5) n++; return n; })();
 
     const mistakesCount = DT.mistakeCount();
+    // Per-point counts
+    const ptsCount = { 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (let i = 0; i < total; i++) {
+      const n = DT.pointsNum(DT.structural(i));
+      if (ptsCount[n] !== undefined) ptsCount[n]++;
+    }
     const chips = [
       `<button class="chip ${active==='all'?'active':''}" data-t="all">${T('All','Alle')} (${total})</button>`,
       `<button class="chip ${active==='mistakes'?'active':''}" data-t="mistakes" ${mistakesCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>✗ (${mistakesCount})</button>`,
       `<button class="chip ${active==='fav'?'active':''}" data-t="fav" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ (${favCount})</button>`,
-      `<button class="chip ${active==='p5'?'active':''}" data-t="p5">${T('5-pt only','Nur 5-Pkt')} (${p5Count})</button>`,
+      // One chip per point value
+      ...[5,4,3,2].map(p => `<button class="chip ${active==='points:'+p?'active':''}" data-t="points:${p}">${p}pt (${ptsCount[p]||0})</button>`),
       ...klasses.map(k => `<button class="chip ${active==='klasse:'+k?'active':''}" data-t="klasse:${k}">${esc(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`),
       ...themesEN.map(t => `<button class="chip ${active==='theme:'+t?'active':''}" data-t="theme:${escAttr(t)}">${esc(themeLabel(t))}</button>`)
     ].join('');
@@ -364,7 +371,14 @@
     else if (active === 'mistakes') {
       pool = DT.mistakeIndices();
     }
-    else if (active === 'p5') {
+    else if (active.startsWith('points:')) {
+      const n = +active.slice(7);
+      pool = [];
+      for (let i = 0; i < DT.totalCount(); i++) {
+        if (DT.pointsNum(DT.structural(i)) === n) pool.push(i);
+      }
+    } else if (active === 'p5') {
+      // legacy key from older state
       pool = [];
       for (let i = 0; i < DT.totalCount(); i++) {
         if (DT.pointsNum(DT.structural(i)) === 5) pool.push(i);
