@@ -118,6 +118,13 @@
   .sign .qid {
     font-size: 10px; color: var(--muted);
     font-family: ui-monospace, "SF Mono", monospace;
+    display: flex; gap: 6px; align-items: center;
+  }
+  .sign .source-link {
+    color: var(--accent); text-decoration: none; font-size: 11px;
+    padding: 2px 6px; border-radius: 4px; margin-left: auto;
+    background: rgba(96,165,250,0.12);
+    -webkit-tap-highlight-color: rgba(96,165,250,0.25);
   }
 
   .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
@@ -290,12 +297,24 @@
   function card(i) {
     const q = DT.getQ(i, lang);
     const url = (q.image_urls && q.image_urls[0]) || '';
+    const sourceLink = q.url ? `<a class="source-link" data-source="1" href="${escAttr(q.url)}" target="_blank" rel="noopener">↗</a>` : '';
     return `<div class="sign">
       <div class="img-wrap"><img src="${escAttr(url)}" loading="lazy" decoding="async" alt=""/></div>
       <div class="meaning">${esc(meaningFor(q))}</div>
-      <div class="qid">${esc(q.question_id)}</div>
+      <div class="qid"><span>${esc(q.question_id)}</span>${sourceLink}</div>
     </div>`;
   }
+
+  // Delegated source-link click — needed for iOS PWA standalone where
+  // <a target="_blank"> sometimes silently does nothing.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.source-link[data-source]');
+    if (!a) return;
+    e.preventDefault();
+    const u = a.getAttribute('href');
+    const w = window.open(u, '_blank', 'noopener,noreferrer');
+    if (!w) location.href = u;
+  });
 
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function escAttr(s) { return esc(s); }
