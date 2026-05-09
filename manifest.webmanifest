@@ -1,7 +1,7 @@
 {
   "name": "Bitte Bestehen",
   "short_name": "Bitte Bestehen",
-  "start_url": "./",
+  "start_url": "./feed.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
