@@ -755,20 +755,15 @@
       };
     }
 
-    // Test mode: option taps + submit
+    // Test mode: option taps + submit. Always toggle (even when there is only
+    // one correct answer) so the user can deliberately over-select and learn
+    // from being marked wrong — matches the actual exam UI.
     if (mode === 'test' && hasOptions && !submitted) {
-      const isMulti = (q.correct_answers || []).length > 1;
       document.querySelectorAll('.option[data-letter]').forEach(el => {
         el.addEventListener('click', () => {
           const L = el.dataset.letter;
-          if (isMulti) {
-            if (currentSelected.has(L)) currentSelected.delete(L);
-            else currentSelected.add(L);
-          } else {
-            currentSelected.clear();
-            currentSelected.add(L);
-          }
-          // Light re-render of options + submit button
+          if (currentSelected.has(L)) currentSelected.delete(L);
+          else currentSelected.add(L);
           renderOptionsOnly(q, correctSet);
         });
       });
@@ -844,18 +839,13 @@
     optsEl.innerHTML = html;
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) submitBtn.disabled = currentSelected.size === 0;
-    // Re-attach option click handlers (since we replaced the DOM)
-    const isMulti = (q.correct_answers || []).length > 1;
+    // Re-attach option click handlers (since we replaced the DOM). Always
+    // toggle so over-selecting on single-correct questions is allowed.
     optsEl.querySelectorAll('.option[data-letter]').forEach(el => {
       el.addEventListener('click', () => {
         const L = el.dataset.letter;
-        if (isMulti) {
-          if (currentSelected.has(L)) currentSelected.delete(L);
-          else currentSelected.add(L);
-        } else {
-          currentSelected.clear();
-          currentSelected.add(L);
-        }
+        if (currentSelected.has(L)) currentSelected.delete(L);
+        else currentSelected.add(L);
         renderOptionsOnly(q, correctSet);
       });
     });

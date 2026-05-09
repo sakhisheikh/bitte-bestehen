@@ -299,19 +299,15 @@
     render();
   }
 
-  function toggleOption(qIdx, letter, isMulti) {
+  function toggleOption(qIdx, letter) {
     if (!state || state.submitted) return;
     const q = state.questions[qIdx];
     const set = new Set(q.selected);
-    if (isMulti) {
-      if (set.has(letter)) set.delete(letter); else set.add(letter);
-    } else {
-      set.clear();
-      set.add(letter);
-    }
+    // Always toggle (even on single-correct questions) so the user can
+    // over-select and the exam catches it as wrong — same as the real test.
+    if (set.has(letter)) set.delete(letter); else set.add(letter);
     q.selected = [...set];
     saveExam();
-    // light update — only this card's options
     const cardEl = document.querySelector(`.card[data-i="${qIdx}"]`);
     if (cardEl) updateCardOptions(cardEl, qIdx);
     updateSubmitProgress();
@@ -535,11 +531,8 @@
     if (!revealed) {
       document.querySelectorAll('.card').forEach(cardEl => {
         const qIdx = +cardEl.dataset.i;
-        const s = DT.structural(state.questions[qIdx].idx);
-        const correctSize = (s.correct_answers || []).length;
-        const isMulti = correctSize > 1;
         cardEl.querySelectorAll('.option[data-letter]').forEach(el => {
-          el.addEventListener('click', () => toggleOption(qIdx, el.dataset.letter, isMulti));
+          el.addEventListener('click', () => toggleOption(qIdx, el.dataset.letter));
         });
       });
     }

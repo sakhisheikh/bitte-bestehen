@@ -250,6 +250,32 @@
   }
   .result-banner.correct { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
   .result-banner.wrong { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.55); }
+
+  /* Inline search bar — slides under the topbar to filter the feed */
+  .searchbar {
+    display: none;
+    padding: 8px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    gap: 8px; align-items: center;
+    position: sticky;
+    top: 56px; /* below the main topbar */
+    z-index: 25;
+  }
+  .searchbar.open { display: flex; }
+  .searchbar input {
+    flex: 1; padding: 8px 12px; border-radius: 8px;
+    background: var(--card2); color: var(--text);
+    border: 1px solid var(--card2); font-size: 15px;
+    -webkit-appearance: none; appearance: none;
+  }
+  .searchbar input::placeholder { color: var(--muted); }
+  .searchbar .clear-btn {
+    background: var(--card); color: var(--text);
+    border: none; padding: 8px 12px; border-radius: 8px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    line-height: 1;
+  }
 </style>
 </head>
 <body>
@@ -267,9 +293,14 @@
       </div>
       <div class="right">
         <button class="toolbtn" id="langBtn" title="Toggle language">EN</button>
+        <button class="toolbtn" id="searchBtn" title="Search">⌕</button>
         <button class="toolbtn" id="shuffleBtn">Shuffle</button>
         <button class="toolbtn" id="filterBtn">Filter</button>
       </div>
+    </div>
+    <div class="searchbar" id="searchbar">
+      <input id="searchInput" type="search" placeholder="Search…" autocomplete="off" />
+      <button class="clear-btn" id="searchClear" title="Clear">×</button>
     </div>
   </header>
 
@@ -289,6 +320,7 @@
   let order = [];
   let pointsAllowed = new Set(); // empty = all allowed; otherwise only these point values
   let favOnly = false;
+  let searchQuery = '';
   let mistakesOnly = false;
   let mode = 'memorize'; // 'memorize' | 'test'
   let klasseKey = 'all';
@@ -335,6 +367,7 @@
     delete cur.p5Only;
     cur.favOnly = favOnly; cur.mistakesOnly = mistakesOnly;
     cur.mode = mode; cur.klasseKey = klasseKey; cur.lang = lang;
+    cur.searchQuery = searchQuery;
     localStorage.setItem(STATE_KEY, JSON.stringify(cur));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
@@ -349,10 +382,26 @@
       if (s.mode === 'memorize' || s.mode === 'test') mode = s.mode;
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
       if (typeof s.lang === 'string') lang = s.lang;
+      if (typeof s.searchQuery === 'string') searchQuery = s.searchQuery;
       if (Array.isArray(o)) order = o;
     } catch (e) {}
     const urlLang = new URLSearchParams(location.search).get('lang');
     if (urlLang === 'de' || urlLang === 'en') lang = urlLang;
+  }
+
+  // Substring match across qid, question text (EN+DE), correct answers, options.
+  function matchesQuery(idx, q) {
+    if (!q) return true;
+    const e = DT.structural(idx);
+    const d = DT.getQ(idx, 'de');
+    const haystacks = [
+      e.question_id, e.question_text || '', d && d.question_text || '',
+      ...(e.correct_answers || []).map(c => c.text || c.letter || ''),
+      ...(d && d.correct_answers || []).map(c => c.text || c.letter || ''),
+      ...(e.options || []).map(o => o.text || ''),
+      ...(d && d.options || []).map(o => o.text || '')
+    ];
+    return haystacks.some(s => s && s.toLowerCase().includes(q));
   }
 
   function rebuildOrder() {
@@ -368,8 +417,48 @@
       const ms = new Set(DT.mistakeIds());
       pool = pool.filter(i => ms.has(DT.structural(i).question_id));
     }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      pool = pool.filter(i => matchesQuery(i, q));
+    }
     order = pool;
     saveState();
+  }
+
+  function toggleSearch() {
+    const bar = $('searchbar');
+    const input = $('searchInput');
+    if (!bar.classList.contains('open')) {
+      bar.classList.add('open');
+      input.value = searchQuery;
+      input.placeholder = T('Search question, answer, ID…', 'Frage, Antwort, ID suchen…');
+      setTimeout(() => input.focus(), 50);
+    } else {
+      bar.classList.remove('open');
+      input.blur();
+    }
+  }
+  function clearSearch() {
+    $('searchInput').value = '';
+    if (searchQuery) {
+      searchQuery = '';
+      rebuildOrder();
+      localStorage.removeItem(FEED_POS_KEY);
+      render();
+    }
+    $('searchInput').focus();
+  }
+  let searchDebounce;
+  function onSearchInput(e) {
+    clearTimeout(searchDebounce);
+    const v = e.target.value.trim();
+    searchDebounce = setTimeout(() => {
+      if (v === searchQuery) return;
+      searchQuery = v;
+      rebuildOrder();
+      localStorage.removeItem(FEED_POS_KEY);
+      render();
+    }, 150);
   }
   function shuffleOrder() {
     for (let i = order.length - 1; i > 0; i--) {
@@ -402,6 +491,7 @@
     }
     if (favOnly) labels.push('★');
     if (mistakesOnly) labels.push('✗');
+    if (searchQuery) labels.push(`"${searchQuery}"`);
     if (mode === 'test') {
       let right = 0, wrong = 0;
       for (const i of order) {
@@ -446,22 +536,16 @@
   function setupTestMode() {
     if (mode !== 'test') return;
 
-    // Tap an option in an unsubmitted card to toggle selection
+    // Tap an option in an unsubmitted card to toggle selection. Always toggle
+    // (regardless of how many correct answers exist) so the user can
+    // deliberately over-select and learn from a wrong submission.
     document.querySelectorAll('.option.tappable[data-letter][data-qid]').forEach(el => {
       el.onclick = () => {
         const qid = el.dataset.qid;
         const letter = el.dataset.letter;
-        const idx = lookupIdxByQid(qid);
-        if (idx == null) return;
-        const sQ = DT.structural(idx);
-        const isMulti = (sQ.correct_answers || []).length > 1;
         if (!pending[qid]) pending[qid] = new Set();
         const set = pending[qid];
-        if (isMulti) {
-          if (set.has(letter)) set.delete(letter); else set.add(letter);
-        } else {
-          set.clear(); set.add(letter);
-        }
+        if (set.has(letter)) set.delete(letter); else set.add(letter);
         rerenderCardOptions(qid);
       };
     });
@@ -551,18 +635,13 @@
   function setupTestModeForCard(cardEl) {
     if (mode !== 'test') return;
     cardEl.querySelectorAll('.option.tappable[data-letter][data-qid]').forEach(el => {
-      // option elements are freshly created by rerenderCardOptions, no accumulation
+      // Always toggle — over-selecting is allowed on single-correct questions.
       el.onclick = () => {
         const qid = el.dataset.qid;
         const letter = el.dataset.letter;
-        const idx = lookupIdxByQid(qid);
-        if (idx == null) return;
-        const sQ = DT.structural(idx);
-        const isMulti = (sQ.correct_answers || []).length > 1;
         if (!pending[qid]) pending[qid] = new Set();
         const set = pending[qid];
-        if (isMulti) { if (set.has(letter)) set.delete(letter); else set.add(letter); }
-        else { set.clear(); set.add(letter); }
+        if (set.has(letter)) set.delete(letter); else set.add(letter);
         rerenderCardOptions(qid);
       };
     });
@@ -875,9 +954,18 @@
     }
     $('shuffleBtn').onclick = shuffleOrder;
     $('filterBtn').onclick = openFilterSheet;
+    $('searchBtn').onclick = toggleSearch;
+    $('searchInput').addEventListener('input', onSearchInput);
+    $('searchClear').onclick = clearSearch;
     $('langBtn').onclick = () => { lang = lang === 'en' ? 'de' : 'en'; saveState(); render(); };
     $('topFab').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('modal').onclick = e => { if (e.target.id === 'modal') $('modal').classList.remove('open'); };
+
+    // Restore search bar visibility if a query was persisted
+    if (searchQuery) {
+      $('searchbar').classList.add('open');
+      $('searchInput').value = searchQuery;
+    }
 
     // show top fab once user has scrolled
     window.addEventListener('scroll', () => {
