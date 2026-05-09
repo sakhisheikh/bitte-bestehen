@@ -471,7 +471,7 @@
 
   let order = [];           // array of indices into questions
   let pos = 0;              // current position in order
-  let p5Only = false;       // 5-points-only toggle
+  let pointsAllowed = new Set(); // empty = all allowed; otherwise only these point values
   let favOnly = false;      // favorites-only toggle
   let mistakesOnly = false; // wrong-answers-only toggle
   let klasseKey = 'all';    // all | grundstoff | b | lkw
@@ -495,7 +495,7 @@
 
   /* ---------- persistence ---------- */
   function saveState() {
-    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, p5Only, favOnly, mistakesOnly, klasseKey, lang, searchQuery, mode, commentExpanded }));
+    localStorage.setItem(STATE_KEY, JSON.stringify({ pos, pointsAllowed: [...pointsAllowed], favOnly, mistakesOnly, klasseKey, lang, searchQuery, mode, commentExpanded }));
     localStorage.setItem(ORDER_KEY, JSON.stringify(order));
   }
   function loadState() {
@@ -503,7 +503,8 @@
       const s = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
       const o = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null');
       if (typeof s.pos === 'number') pos = s.pos;
-      if (typeof s.p5Only === 'boolean') p5Only = s.p5Only;
+      if (Array.isArray(s.pointsAllowed)) pointsAllowed = new Set(s.pointsAllowed.map(Number));
+      else if (s.p5Only === true) pointsAllowed = new Set([5]); // legacy migration
       if (typeof s.favOnly === 'boolean') favOnly = s.favOnly;
       if (typeof s.mistakesOnly === 'boolean') mistakesOnly = s.mistakesOnly;
       if (typeof s.klasseKey === 'string') klasseKey = s.klasseKey;
@@ -537,7 +538,9 @@
   /* ---------- order / filter ---------- */
   function rebuildOrder() {
     let pool = DT.poolIndices(klasseKey);
-    if (p5Only) pool = pool.filter(i => DT.pointsNum(DT.structural(i)) === 5);
+    if (pointsAllowed.size) {
+      pool = pool.filter(i => pointsAllowed.has(DT.pointsNum(DT.structural(i))));
+    }
     if (favOnly) {
       const favs = new Set(DT.favoriteIds());
       pool = pool.filter(i => favs.has(DT.structural(i).question_id));
@@ -605,7 +608,10 @@
     const labels = [];
     if (mode === 'test') labels.push(T('TEST', 'TEST'));
     if (klasseKey !== 'all') labels.push(DT.klasseLabel(klasseKey, lang));
-    if (p5Only) labels.push(T('5-pt only', 'nur 5-Punkte'));
+    if (pointsAllowed.size) {
+      const sorted = [...pointsAllowed].sort();
+      labels.push(`${sorted.join('+')}pt`);
+    }
     if (favOnly) labels.push(T('★ favorites', '★ Favoriten'));
     if (mistakesOnly) labels.push(T('✗ mistakes', '✗ Fehler'));
     if (searchQuery) labels.push(`"${searchQuery}"`);
@@ -887,9 +893,11 @@
       <button class="${favOnly ? 'active' : ''}" data-action="fav" data-v="1" ${favCount === 0 ? 'disabled style="opacity:0.5;"' : ''}>★ ${T('Favorites only', 'Nur Favoriten')} (${favCount})</button>
       <h3 style="margin-top:14px;">${T('Klasse', 'Klasse')}</h3>
       ${klasseKeys.map(k => `<button class="${klasseKey === k ? 'active' : ''}" data-action="klasse" data-v="${k}">${escapeHtml(DT.klasseLabel(k, lang))} (${DT.klasseCount(k)})</button>`).join('')}
-      <h3 style="margin-top:14px;">${T('Difficulty', 'Schwierigkeit')}</h3>
-      <button class="${!p5Only ? 'active' : ''}" data-action="p5" data-v="0">${T('All point values', 'Alle Punktwerte')}</button>
-      <button class="${p5Only ? 'active' : ''}" data-action="p5" data-v="1">${T('5-point only (high-stakes)', 'Nur 5-Punkte (Wichtig)')}</button>
+      <h3 style="margin-top:14px;">${T('Points', 'Punkte')}</h3>
+      <div style="display:flex; gap:6px;">
+        <button class="${!pointsAllowed.size ? 'active' : ''}" data-action="pts" data-v="all" style="flex:1; margin-bottom:0; text-align:center;">${T('All','Alle')}</button>
+        ${[2,3,4,5].map(p => `<button class="${pointsAllowed.has(p) ? 'active' : ''}" data-action="pts" data-v="${p}" style="flex:1; margin-bottom:0; text-align:center;">${p}pt</button>`).join('')}
+      </div>
       <h3 style="margin-top:14px;">${T('Language', 'Sprache')}</h3>
       <button class="${lang === 'en' ? 'active' : ''}" data-action="lang" data-v="en">English</button>
       <button class="${lang === 'de' ? 'active' : ''}" data-action="lang" data-v="de">Deutsch</button>
@@ -910,7 +918,7 @@
             localStorage.removeItem(ORDER_KEY);
             localStorage.removeItem(PROGRESS_KEY);
             DT.clearMistakes();
-            klasseKey = 'all'; p5Only = false; favOnly = false; mistakesOnly = false; searchQuery = ''; mode = 'memorize';
+            klasseKey = 'all'; pointsAllowed = new Set(); favOnly = false; mistakesOnly = false; searchQuery = ''; mode = 'memorize';
             progress = {};
             currentSelected = new Set();
             rebuildOrder();
@@ -939,8 +947,21 @@
           $('modal').classList.remove('open');
           return;
         }
+        if (a === 'pts') {
+          if (v === 'all') pointsAllowed = new Set();
+          else {
+            const n = +v;
+            if (pointsAllowed.has(n)) pointsAllowed.delete(n);
+            else pointsAllowed.add(n);
+          }
+          currentSelected = new Set();
+          rebuildOrder();
+          saveState();
+          render();
+          openFilterSheet(); // keep sheet open with updated active states
+          return;
+        }
         if (a === 'klasse') { klasseKey = v; currentSelected = new Set(); rebuildOrder(); }
-        else if (a === 'p5')  { p5Only = v === '1'; currentSelected = new Set(); rebuildOrder(); }
         else if (a === 'fav') { favOnly = v === '1'; currentSelected = new Set(); rebuildOrder(); }
         else if (a === 'mistakes') { mistakesOnly = v === '1'; currentSelected = new Set(); rebuildOrder(); }
         else if (a === 'mode'){ mode = v; currentSelected = new Set(); }
