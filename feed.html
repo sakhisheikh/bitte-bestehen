@@ -310,6 +310,24 @@
   function saveProgress() {
     try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch {}
   }
+  // One-time cleanup: an earlier feed Test-mode bug double-fired the submit
+  // handler, overwriting correct submissions to {result:'wrong', selected:[]}.
+  // Detect those, drop them from progress, and remove the qid from the
+  // mistakes log (they were never really wrong).
+  function repairBuggyProgress() {
+    const FLAG = 'dt_repaired_v2';
+    if (localStorage.getItem(FLAG)) return;
+    let n = 0;
+    for (const [qid, rec] of Object.entries(progress)) {
+      if (rec && rec.result === 'wrong' && (!rec.selected || rec.selected.length === 0)) {
+        delete progress[qid];
+        DT.recordOutcome(qid, true); // removes qid from mistakes set
+        n++;
+      }
+    }
+    if (n > 0) saveProgress();
+    localStorage.setItem(FLAG, String(Date.now()));
+  }
 
   function saveState() {
     const cur = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
@@ -422,7 +440,7 @@
 
     // Tap an option in an unsubmitted card to toggle selection
     document.querySelectorAll('.option.tappable[data-letter][data-qid]').forEach(el => {
-      el.addEventListener('click', () => {
+      el.onclick = () => {
         const qid = el.dataset.qid;
         const letter = el.dataset.letter;
         const idx = lookupIdxByQid(qid);
@@ -437,26 +455,31 @@
           set.clear(); set.add(letter);
         }
         rerenderCardOptions(qid);
-      });
+      };
     });
 
-    // Submit per card
+    // Submit per card. Use .onclick (not addEventListener) so repeated wirings
+    // overwrite instead of accumulate — option re-renders kept stacking handlers,
+    // and a stale handler with empty `pending` overwrote correct submissions.
     document.querySelectorAll('.submit-btn[data-submit-qid]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const qid = btn.dataset.submitQid;
-        const idx = lookupIdxByQid(qid);
-        if (idx == null) return;
-        const sQ = DT.structural(idx);
-        const correct = new Set((sQ.correct_answers || []).map(c => c.letter));
-        const sel = pending[qid] || new Set();
-        const right = sel.size === correct.size && [...sel].every(l => correct.has(l));
-        progress[qid] = { result: right ? 'correct' : 'wrong', selected: [...sel] };
-        saveProgress();
-        DT.recordOutcome(qid, right);
-        delete pending[qid];
-        rerenderCard(qid);
-      });
+      btn.onclick = () => submitFromBtn(btn);
     });
+  }
+
+  function submitFromBtn(btn) {
+    const qid = btn.dataset.submitQid;
+    const idx = lookupIdxByQid(qid);
+    if (idx == null) return;
+    const sQ = DT.structural(idx);
+    const correct = new Set((sQ.correct_answers || []).map(c => c.letter));
+    const sel = pending[qid] || new Set();
+    if (sel.size === 0) return; // safety: ignore empty submits
+    const right = sel.size === correct.size && [...sel].every(l => correct.has(l));
+    progress[qid] = { result: right ? 'correct' : 'wrong', selected: [...sel] };
+    saveProgress();
+    DT.recordOutcome(qid, right);
+    delete pending[qid];
+    rerenderCard(qid);
   }
 
   // Map a qid back to its index in DT (used by feed since cards live as 'order' entries)
@@ -520,7 +543,8 @@
   function setupTestModeForCard(cardEl) {
     if (mode !== 'test') return;
     cardEl.querySelectorAll('.option.tappable[data-letter][data-qid]').forEach(el => {
-      el.addEventListener('click', () => {
+      // option elements are freshly created by rerenderCardOptions, no accumulation
+      el.onclick = () => {
         const qid = el.dataset.qid;
         const letter = el.dataset.letter;
         const idx = lookupIdxByQid(qid);
@@ -532,25 +556,10 @@
         if (isMulti) { if (set.has(letter)) set.delete(letter); else set.add(letter); }
         else { set.clear(); set.add(letter); }
         rerenderCardOptions(qid);
-      });
+      };
     });
     const btn = cardEl.querySelector('.submit-btn[data-submit-qid]');
-    if (btn) {
-      btn.addEventListener('click', () => {
-        const qid = btn.dataset.submitQid;
-        const idx = lookupIdxByQid(qid);
-        if (idx == null) return;
-        const sQ = DT.structural(idx);
-        const correct = new Set((sQ.correct_answers || []).map(c => c.letter));
-        const sel = pending[qid] || new Set();
-        const right = sel.size === correct.size && [...sel].every(l => correct.has(l));
-        progress[qid] = { result: right ? 'correct' : 'wrong', selected: [...sel] };
-        saveProgress();
-        DT.recordOutcome(qid, right);
-        delete pending[qid];
-        rerenderCard(qid);
-      });
-    }
+    if (btn) btn.onclick = () => submitFromBtn(btn);
   }
 
   function setupStarButtons() {
@@ -837,6 +846,7 @@
     }
     loadState();
     loadProgress();
+    repairBuggyProgress();
     if (!order.length || order.length > DT.totalCount()) {
       rebuildOrder();
     }
