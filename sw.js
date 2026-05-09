@@ -1,7 +1,8 @@
-const CACHE = 'dt-v21';
+const CACHE = 'dt-v22';
 const ASSETS = [
   './',
   './index.html',
+  './quiz.html',
   './cheatsheet.html',
   './feed.html',
   './rules.html',
