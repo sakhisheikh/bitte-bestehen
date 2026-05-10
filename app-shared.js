@@ -85,20 +85,33 @@ window.DT = (() => {
     );
   }
 
+  // Chapters that are truck-only (Klasse C/CE specific) regardless of theme.
+  // Used to exclude these from Klasse B and identify them for the LKW preset.
+  const LKW_ONLY_CHAPTERS = new Set([
+    'Driving And Rest Periods',                    // commercial driver hours
+    'Ec Monitoring Device',                        // tachograph
+    'Receipt Transport And Delivery Of Goods',     // freight
+    'Qualification And Ability Of Truck Drivers',  // theme 2.8
+  ]);
+
   function inKlasseBThemes(q) {
     const p = themePrefix(q);
-    return p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.'].includes(p);
+    if (p === '2.8.') return false;
+    if (!(p.startsWith('1.') || ['2.1.','2.2.','2.4.','2.5.','2.6.','2.7.'].includes(p))) return false;
+    if (LKW_ONLY_CHAPTERS.has(q.chapter_name)) return false;
+    return true;
   }
 
   // Klasse presets. Heuristic — upstream dataset isn't tagged with class.
-  // Theme 1.x = Grundstoff (basics, all classes). 2.6/2.7/2.8 = LKW-heavy.
-  // Klasse B (car) further excludes anything that mentions motorcycle/Motorrad.
+  // Klasse B includes themes 1.x (Grundstoff) + 2.1-2.7 minus a few
+  // truck-specific chapters; 2.8 is fully truck-only. Motorcycle stems
+  // are dropped from B and Grundstoff via the looksMotorcycle filter.
   const KLASSE = {
-    all:        { en: 'All themes',                       de: 'Alle Themen',                 test: () => true },
-    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',          test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) },
-    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',              test: q => inKlasseBThemes(q) && !looksMotorcycle(q) },
+    all:        { en: 'All themes',                       de: 'Alle Themen',                  test: () => true },
+    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',           test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) },
+    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',               test: q => inKlasseBThemes(q) && !looksMotorcycle(q) },
     b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && isFactQuestion(q) },
-    lkw:        { en: 'LKW topics (Klasse C/CE)',         de: 'LKW-Stoff (Klasse C/CE)',     test: q => ['2.6.','2.7.','2.8.'].includes(themePrefix(q)) }
+    lkw:        { en: 'LKW topics (Klasse C/CE)',         de: 'LKW-Stoff (Klasse C/CE)',      test: q => themePrefix(q) === '2.8.' || LKW_ONLY_CHAPTERS.has(q.chapter_name) }
   };
 
   function klasseLabel(key, lang) {
