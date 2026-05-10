@@ -90,19 +90,41 @@ window.DT = (() => {
   // where a truck or bus is just present in traffic are kept.
   function looksCommercial(q) {
     const text = (q.question_text || '').toLowerCase();
-    return (
-      /\byour (truck|lorry|hgv|bus|coach)\b/.test(text) ||
-      /\b(driving|drive|operating|operate) (a|your|the) (truck|lorry|hgv|bus|coach)\b/.test(text) ||
-      /\b(in|on) (a|your|the) (truck|lorry|hgv|bus) with\b/.test(text) ||
-      /\bas a (truck|lorry|hgv|bus|coach) driver\b/.test(text) ||
-      /\bfor a (truck|lorry|bus|coach) driver/.test(text) ||
-      /\btruck drivers?\W+(must|should|are required|need to|have to)\b/.test(text) ||
-      // German
-      /\b(ihr|ihren|in ihrem|mit ihrem) (lkw|bus|reisebus)\b/.test(text) ||
-      /\bsie fahren (einen|den) (lkw|bus|reisebus)/.test(text) ||
-      /\bals (lkw|bus|berufskraft)fahrer\b/.test(text) ||
-      /\b(in|mit) einem (lkw|bus|reisebus)/.test(text)
-    );
+    // Truck/bus operator phrasings
+    if (/\byour (truck|lorry|hgv|bus|coach|articulated|semi-?trailer|delivery vehicle)\b/.test(text)) return true;
+    if (/\b(driving|drive|operating|operate) (a|your|the) (truck|lorry|hgv|bus|coach|articulated|semi-?trailer|delivery vehicle|lastkraftwagen|sattelzug)\b/.test(text)) return true;
+    if (/\b(in|on) (a|your|the) (truck|lorry|hgv|bus|articulated|sattelzug) with\b/.test(text)) return true;
+    if (/\bas a (truck|lorry|hgv|bus|coach) driver\b/.test(text)) return true;
+    if (/\bfor a (truck|lorry|bus|coach) driver/.test(text)) return true;
+    if (/\btruck drivers?\W+(must|should|are required|need to|have to)\b/.test(text)) return true;
+    // German operator phrasings
+    if (/\b(ihr|ihren|in ihrem|mit ihrem) (lkw|bus|reisebus|sattelzug|lastkraftwagen)\b/.test(text)) return true;
+    if (/\bsie fahren (einen|den) (lkw|bus|reisebus|sattelzug|lastkraftwagen)/.test(text)) return true;
+    if (/\bals (lkw|bus|berufskraft)fahrer\b/.test(text)) return true;
+    if (/\b(in|mit) einem (lkw|bus|reisebus|sattelzug|lastkraftwagen)/.test(text)) return true;
+    // Commercial weight markers — these only appear in non-B questions.
+    // Klasse B combos top out at 4.25 t (B96), so any "5 t / 7.5 t / 12 t /
+    // 18 t / 40 t" gross-weight reference is commercial-only.
+    if (/\b(5\.[05]|7\.5|9\.0|12|14|18|24|26|32|40)\s*t\b.*\b(gross vehicle weight|gross weight|permissible total mass|zulässige? gesamt|zulässige?\s*gesamtmasse|zgg|gesamtgewicht)\b/.test(text)) return true;
+    if (/\b(gross vehicle weight|gross weight|permissible total mass|zulässige? gesamt|gesamtmasse|gesamtgewicht).{0,40}\b(5\.[05]|7\.5|9\.0|12|14|18|24|26|32|40)\s*t\b/.test(text)) return true;
+    return false;
+  }
+
+  // Identify Klasse-A1/A2/AM/T questions (moped, tractor, agricultural).
+  // Most of A is already caught by looksMotorcycle; this catches the rest.
+  function looksOtherClass(q) {
+    const text = (q.question_text || '').toLowerCase();
+    // Klasse AM (moped) / Klasse A1 (light motorcycle) — operator-perspective
+    if (/\b(your|riding|driving|operate) (a|your|the) (moped|scooter|e-?scooter)\b/.test(text)) return true;
+    if (/\bas a (moped|scooter) (rider|driver)\b/.test(text)) return true;
+    if (/\b(ihr|ihren) (mofa|moped|roller)\b/.test(text)) return true;
+    if (/\bsie fahren (ein|einen|den) (mofa|moped|roller)/.test(text)) return true;
+    // Klasse T / L (tractor / agricultural)
+    if (/\b(your|driving|drive|operating) (a|your|the) (tractor|agricultural|farming) (machine|vehicle|combination)/.test(text)) return true;
+    if (/\bas a tractor driver\b/.test(text)) return true;
+    if (/\b(ihr|ihren) (zugmaschine|traktor|landwirtschaft)\b/.test(text)) return true;
+    if (/\bsie fahren (eine|einen) (zugmaschine|traktor)/.test(text)) return true;
+    return false;
   }
 
   // Chapters that are truck-only (Klasse C/CE specific) regardless of theme.
@@ -128,9 +150,9 @@ window.DT = (() => {
   // are dropped from B and Grundstoff via the looksMotorcycle filter.
   const KLASSE = {
     all:        { en: 'All themes',                       de: 'Alle Themen',                  test: () => true },
-    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',           test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) && !looksCommercial(q) },
-    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',               test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && !looksCommercial(q) },
-    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && !looksCommercial(q) && isFactQuestion(q) },
+    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',           test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) && !looksCommercial(q) && !looksOtherClass(q) },
+    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',               test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && !looksCommercial(q) && !looksOtherClass(q) },
+    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && !looksCommercial(q) && !looksOtherClass(q) && isFactQuestion(q) },
     lkw:        { en: 'LKW topics (Klasse C/CE)',         de: 'LKW-Stoff (Klasse C/CE)',      test: q => themePrefix(q) === '2.8.' || LKW_ONLY_CHAPTERS.has(q.chapter_name) }
   };
 
