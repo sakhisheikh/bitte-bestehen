@@ -1,4 +1,4 @@
-const CACHE = 'dt-v32';
+const CACHE = 'dt-v33';
 const ASSETS = [
   './',
   './index.html',

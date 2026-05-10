@@ -85,6 +85,26 @@ window.DT = (() => {
     );
   }
 
+  // Identify operator-perspective truck/bus/coach questions ("you are
+  // driving a truck with X t gross weight..." etc.). Awareness questions
+  // where a truck or bus is just present in traffic are kept.
+  function looksCommercial(q) {
+    const text = (q.question_text || '').toLowerCase();
+    return (
+      /\byour (truck|lorry|hgv|bus|coach)\b/.test(text) ||
+      /\b(driving|drive|operating|operate) (a|your|the) (truck|lorry|hgv|bus|coach)\b/.test(text) ||
+      /\b(in|on) (a|your|the) (truck|lorry|hgv|bus) with\b/.test(text) ||
+      /\bas a (truck|lorry|hgv|bus|coach) driver\b/.test(text) ||
+      /\bfor a (truck|lorry|bus|coach) driver/.test(text) ||
+      /\btruck drivers?\W+(must|should|are required|need to|have to)\b/.test(text) ||
+      // German
+      /\b(ihr|ihren|in ihrem|mit ihrem) (lkw|bus|reisebus)\b/.test(text) ||
+      /\bsie fahren (einen|den) (lkw|bus|reisebus)/.test(text) ||
+      /\bals (lkw|bus|berufskraft)fahrer\b/.test(text) ||
+      /\b(in|mit) einem (lkw|bus|reisebus)/.test(text)
+    );
+  }
+
   // Chapters that are truck-only (Klasse C/CE specific) regardless of theme.
   // Used to exclude these from Klasse B and identify them for the LKW preset.
   const LKW_ONLY_CHAPTERS = new Set([
@@ -108,9 +128,9 @@ window.DT = (() => {
   // are dropped from B and Grundstoff via the looksMotorcycle filter.
   const KLASSE = {
     all:        { en: 'All themes',                       de: 'Alle Themen',                  test: () => true },
-    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',           test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) },
-    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',               test: q => inKlasseBThemes(q) && !looksMotorcycle(q) },
-    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && isFactQuestion(q) },
+    grundstoff: { en: 'Grundstoff (basics, all classes)', de: 'Grundstoff (Basis)',           test: q => themePrefix(q).startsWith('1.') && !looksMotorcycle(q) && !looksCommercial(q) },
+    b:          { en: 'Klasse B / PKW (car)',             de: 'Klasse B / PKW',               test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && !looksCommercial(q) },
+    b_facts:    { en: 'Klasse B — facts only (cheat)',    de: 'Klasse B — nur Fakten (Cheat)', test: q => inKlasseBThemes(q) && !looksMotorcycle(q) && !looksCommercial(q) && isFactQuestion(q) },
     lkw:        { en: 'LKW topics (Klasse C/CE)',         de: 'LKW-Stoff (Klasse C/CE)',      test: q => themePrefix(q) === '2.8.' || LKW_ONLY_CHAPTERS.has(q.chapter_name) }
   };
 
